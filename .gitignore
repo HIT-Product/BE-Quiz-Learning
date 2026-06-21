@@ -31,5 +31,8 @@ images/*
 static/*
 errors/*
 docker/*
-logs/*
-**/*.json
+
+# Personal notes / scratch files
+.note/
+Untitled.png
+*.png

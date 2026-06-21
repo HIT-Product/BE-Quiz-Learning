@@ -2,43 +2,30 @@ import mongoose, { model } from 'mongoose'
 
 const userSchema = new mongoose.Schema(
   {
-    username: {
-      type: String,
-      unique: true
-    },
     email: {
       type: String,
       unique: true,
+      required: true,
       lowercase: true,
       trim: true
     },
-    password: {
-      type: String
-    },
-    avatar: {
+    passwordHash: {
       type: String,
-      default: 'https://default-avatar-url.com/avatar.png'
+      required: true
     },
-    fullName: {
+    displayName: {
       type: String,
+      required: true,
       trim: true,
-      default: ''
+      maxlength: 120
     },
-    bio: {
+    avatarUrl: {
       type: String,
-      default: ''
+      default: null
     },
-    role: {
-      type: String,
-      default: 'user'
-    },
-    totalStudyTime: {
+    defaultQuizSize: {
       type: Number,
-      default: 0
-    },
-    streakDays: {
-      type: Number,
-      default: 0
+      default: 10
     }
   },
   {
