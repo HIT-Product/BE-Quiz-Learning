@@ -15,14 +15,7 @@ const login = {
   })
 }
 
-const refreshToken = {
-  body: Joi.object({
-    refreshToken: Joi.string().required()
-  })
-}
-
 export default {
   register,
-  login,
-  refreshToken
+  login
 }

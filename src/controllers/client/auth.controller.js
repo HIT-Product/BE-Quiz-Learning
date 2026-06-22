@@ -1,49 +1,52 @@
 import { StatusCodes } from 'http-status-codes'
-import { catchAsync, response } from '../../utils/index.js'
+import { catchAsync, response, ApiError, refreshCookieOptions } from '../../utils/index.js'
 import { authService } from '../../services/client/index.js'
 
 const register = catchAsync(async (req, res) => {
   const { email, password, displayName } = req.body
 
-  const user = await authService.register({ email, password, displayName })
+  const { accessToken, refreshToken } = await authService.register({ email, password, displayName })
 
-  return res.status(StatusCodes.CREATED).json(response(StatusCodes.CREATED, 'Đăng ký thành công.', user))
+  res.cookie('refreshToken', refreshToken, refreshCookieOptions)
+  return res.status(StatusCodes.CREATED).json(response(StatusCodes.CREATED, 'Đăng ký thành công.', { accessToken }))
 })
 
 const login = catchAsync(async (req, res) => {
   const { email, password } = req.body
 
-  const result = await authService.login({ email, password })
+  const { accessToken, refreshToken } = await authService.login({ email, password })
 
-  return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Đăng nhập thành công.', result))
+  res.cookie('refreshToken', refreshToken, refreshCookieOptions)
+  return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Đăng nhập thành công.', { accessToken }))
 })
 
 const refreshToken = catchAsync(async (req, res) => {
-  const { refreshToken } = req.body
+  const token = req.cookies.refreshToken
+  if (!token) {
+    throw new ApiError(StatusCodes.UNAUTHORIZED, 'refreshToken không tồn tại.')
+  }
 
-  const result = await authService.refreshToken(refreshToken)
+  const { accessToken, refreshToken: newRefreshToken } = await authService.refreshToken(token)
 
-  return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Cấp token mới thành công.', result))
+  res.cookie('refreshToken', newRefreshToken, refreshCookieOptions)
+  return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Cấp token mới thành công.', { accessToken }))
 })
 
 const logout = catchAsync(async (req, res) => {
-  const { refreshToken } = req.body
+  const token = req.cookies.refreshToken
+  if (token) {
+    await authService.logout(token)
+  }
 
-  await authService.logout(refreshToken)
-
+  res.clearCookie('refreshToken', refreshCookieOptions)
   return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Đăng xuất thành công.'))
 })
 
 const logoutAll = catchAsync(async (req, res) => {
   await authService.logoutAll(req.user._id)
 
+  res.clearCookie('refreshToken', refreshCookieOptions)
   return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Đăng xuất tất cả thiết bị thành công.'))
 })
 
-export default {
-  register,
-  login,
-  refreshToken,
-  logout,
-  logoutAll
-}
+export default { register, login, refreshToken, logout, logoutAll }

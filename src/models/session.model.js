@@ -22,8 +22,8 @@ const sessionSchema = new mongoose.Schema(
     }
 )
 
-sessionSchema.index({ tokenHash: 1 }) // query nhanh khi refresh/logout
-sessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }) // TTL: Mongo tự xóa khi expiresAt đã qua
+sessionSchema.index({ tokenHash: 1 })
+sessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 })
 
 export default model('Session', sessionSchema)
 
