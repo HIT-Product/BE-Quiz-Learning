@@ -1,0 +1,259 @@
+{
+  "info": {
+    "name": "HITProduct API",
+    "_postman_id": "hit-product-api-v1",
+    "description": "API collection for HITProduct backend.\n\nBase URL: {{baseUrl}}\n\nAuth dung httpOnly cookie cho refreshToken:\n- Register/Login: server tra ve { accessToken } trong body, va dat refreshToken vao cookie (Set-Cookie, HttpOnly, path=/api/v1/auth).\n- Postman tu luu cookie vao cookie jar va tu gui lai o cac request cung domain. Khong can tu nhap refreshToken.\n- Refresh/Logout: KHONG can body, server doc refreshToken tu cookie.\n- Logout All: can header Authorization: Bearer {{accessToken}}.\n\nWorkflow:\n1. Register hoac Login -> accessToken tu dong luu vao bien collection, refreshToken nam trong cookie jar.\n2. Dung accessToken cho cac route can xac thuc.\n3. Khi accessToken het han, goi Refresh Token (cookie tu gui) de lay accessToken moi.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Cac endpoint xac thuc nguoi dung: dang ky, dang nhap, lam moi token, dang xuat. refreshToken duoc quan ly qua httpOnly cookie.",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"displayName\": \"Nguyen Van A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Dang ky tai khoan moi. Dang ky xong la dang nhap luon (issue tokens + tao session).\n\n**Validation:**\n- `email`: bat buoc, phai la email hop le\n- `password`: bat buoc, toi thieu 6 ky tu\n- `displayName`: bat buoc, khong duoc de trong\n\n**Response 201:**\n```json\n{\n  \"statusCode\": 201,\n  \"message\": \"Dang ky thanh cong.\",\n  \"data\": { \"accessToken\": \"<jwt>\" }\n}\n```\nHeader tra ve co `Set-Cookie: refreshToken=...; HttpOnly; Path=/api/v1/auth`.\n\n**Errors:**\n- `400`: Validation that bai\n- `409`: Email da ton tai"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "  console.log('accessToken da duoc luu.');",
+                  "}",
+                  "",
+                  "pm.test(\"Body chi co accessToken (khong lo refreshToken)\", () => {",
+                  "  pm.expect(json.data).to.have.property('accessToken');",
+                  "  pm.expect(json.data).to.not.have.property('refreshToken');",
+                  "});",
+                  "",
+                  "pm.test(\"Co cookie refreshToken (HttpOnly)\", () => {",
+                  "  pm.expect(pm.cookies.has('refreshToken')).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Dang nhap. Body tra ve accessToken, refreshToken nam trong httpOnly cookie.\n\nScript tu dong luu `accessToken` vao bien collection.\n\n**Response 200:**\n```json\n{\n  \"statusCode\": 200,\n  \"message\": \"Dang nhap thanh cong.\",\n  \"data\": { \"accessToken\": \"<jwt>\" }\n}\n```\n\n**Errors:**\n- `400`: Validation that bai\n- `401`: Email hoac mat khau khong dung"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "  console.log('accessToken da duoc luu.');",
+                  "}",
+                  "",
+                  "pm.test(\"Co accessToken, khong co refreshToken trong body\", () => {",
+                  "  pm.expect(json.data).to.have.property('accessToken');",
+                  "  pm.expect(json.data).to.not.have.property('refreshToken');",
+                  "});",
+                  "",
+                  "pm.test(\"Co cookie refreshToken (HttpOnly)\", () => {",
+                  "  pm.expect(pm.cookies.has('refreshToken')).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/auth/refresh-token",
+            "description": "Lay accessToken moi khi accessToken het han. KHONG can body: server doc refreshToken tu cookie (Postman tu gui cookie).\n\nAp dung token rotation: refreshToken cu bi vo hieu, cookie duoc cap moi qua Set-Cookie.\n\n**Response 200:**\n```json\n{\n  \"statusCode\": 200,\n  \"message\": \"Cap token moi thanh cong.\",\n  \"data\": { \"accessToken\": \"<jwt_moi>\" }\n}\n```\n\n**Errors:**\n- `401`: Thieu cookie / token khong hop le / het han / session khong ton tai"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "  console.log('accessToken moi da duoc cap nhat.');",
+                  "}",
+                  "",
+                  "pm.test(\"Co accessToken moi\", () => {",
+                  "  pm.expect(json.data).to.have.property('accessToken');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/auth/logout",
+            "description": "Dang xuat khoi thiet bi hien tai. KHONG can body: server doc refreshToken tu cookie, xoa session tuong ung va clear cookie.\n\n**Response 200:**\n```json\n{\n  \"statusCode\": 200,\n  \"message\": \"Dang xuat thanh cong.\"\n}\n```"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('accessToken', '');",
+                  "  console.log('accessToken da duoc xoa khoi bien.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout All Devices",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/logout-all",
+            "description": "Dang xuat khoi TAT CA thiet bi (xoa toan bo session cua nguoi dung) va clear cookie.\n\n**Yeu cau xac thuc:** `Authorization: Bearer {{accessToken}}`\n\n**Response 200:**\n```json\n{\n  \"statusCode\": 200,\n  \"message\": \"Dang xuat tat ca thiet bi thanh cong.\"\n}\n```\n\n**Errors:**\n- `401`: Thieu hoac accessToken khong hop le / het han"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('accessToken', '');",
+                  "  console.log('Tat ca tokens da duoc xoa.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "Cac endpoint lien quan den nguoi dung.",
+      "item": [
+        {
+          "name": "Example",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/users/example",
+            "description": "Endpoint mau (placeholder). Khong co logic thuc su.\n\n**Response 200:**\n```json\n{\n  \"statusCode\": 200,\n  \"message\": \"Lay thong tin nguoi dung thanh cong.\"\n}\n```"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test(\"Status 200\", () => pm.response.to.have.status(200));"],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "_Health Check",
+      "description": "Kiem tra server dang chay.",
+      "item": [
+        {
+          "name": "Ping Server",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:3000/",
+            "description": "Kiem tra server co dang chay khong. Khong co prefix /api/v1."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test(\"Server dang chay\", () => pm.response.to.have.status(200));"],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
