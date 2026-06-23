@@ -23,6 +23,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon src/server.js",
+    "dev:worker": "nodemon src/worker.js",
+    "prod:worker": "node src/worker.js",
     "prod": "node src/server.js",
     "format": "prettier --write 'src/**/*.{js,json,md}'"
   },

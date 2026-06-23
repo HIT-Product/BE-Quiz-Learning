@@ -11,7 +11,6 @@ import { logger, response } from './utils/index.js'
 import { envConfig, connectDB } from './configs/index.js'
 import { errorMiddleware, morganMiddleware } from './middlewares/index.js'
 import { StatusCodes } from 'http-status-codes'
-import { initWorkers } from './workers/index.js'
 
 const app = express()
 
@@ -57,8 +56,6 @@ app.use(errorMiddleware.errorHandler)
 
 connectDB()
   .then(() => {
-    initWorkers()
-
     app.listen(envConfig.server.port, () => {
       logger.info(`Server is running on ${envConfig.server.host}:${envConfig.server.port}`)
     })
