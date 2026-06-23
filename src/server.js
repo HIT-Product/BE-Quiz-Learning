@@ -3,6 +3,7 @@ import cors from 'cors'
 import http from 'http'
 import express from 'express'
 import mongoose from 'mongoose'
+import cookieParser from 'cookie-parser'
 
 import { fileURLToPath } from 'url'
 import router from './routers/index.js'
@@ -10,16 +11,12 @@ import { logger, response } from './utils/index.js'
 import { envConfig, connectDB } from './configs/index.js'
 import { errorMiddleware, morganMiddleware } from './middlewares/index.js'
 import { StatusCodes } from 'http-status-codes'
+import { initWorkers } from './workers/index.js'
 
 const app = express()
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-
-app.use(cors())
-
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
 
 app.set('views', `${__dirname}/views`)
 app.set('view engine', 'pug')
@@ -28,9 +25,14 @@ app.use(express.static(path.join(__dirname, '..', 'public')))
 
 app.use(
   cors({
-    origin: '*'
+    origin: envConfig.server.clientUrl || 'http://localhost:3000',
+    credentials: true
   })
 )
+
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
+app.use(cookieParser())
 
 app.set('trust proxy', true)
 
@@ -55,6 +57,8 @@ app.use(errorMiddleware.errorHandler)
 
 connectDB()
   .then(() => {
+    initWorkers()
+
     app.listen(envConfig.server.port, () => {
       logger.info(`Server is running on ${envConfig.server.host}:${envConfig.server.port}`)
     })

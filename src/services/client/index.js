@@ -1,2 +1,4 @@
 import userService from './user.service.js'
-export { userService }
+import authService from './auth.service.js'
+
+export { userService, authService }
