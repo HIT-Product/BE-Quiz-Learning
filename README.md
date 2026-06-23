@@ -1,57 +1,37 @@
-# Hướng dẫn chạy và tích hợp Backend cho Frontend
+# HITProduct Backend API
 
-Tài liệu này mô tả các API **đang được triển khai thực tế** trong `src/`. Các API Folder, Deck, Flashcard và Quiz trong những tài liệu khác mới là hướng dẫn, chưa thể gọi từ Frontend.
+Backend cho hệ thống Quiz Learning, xây dựng bằng Express, MongoDB, Redis và JWT.
 
-## 1. Thông tin chung
+## Chạy dự án
 
-- Base URL local: `http://localhost:3000/api/v1`
-- Content-Type: `application/json`
-- Access token: gửi qua header `Authorization: Bearer <accessToken>`
-- Refresh token: Backend tự lưu trong cookie `httpOnly`; JavaScript phía Frontend không đọc được và không cần tự gắn token này.
-- Khi gọi API Auth, Frontend phải cho phép gửi cookie.
-
-Response thành công có cấu trúc:
-
-```json
-{
-  "statusCode": 200,
-  "message": "Thông báo từ Backend",
-  "data": {}
-}
-```
-
-Response lỗi có cấu trúc:
-
-```json
-{
-  "statusCode": 400,
-  "message": "Nội dung lỗi"
-}
-```
-
-Ở môi trường development, response lỗi có thể có thêm trường `stack`.
-
-## 2. Chạy Backend trên máy local
-
-### Yêu cầu
-
-- Node.js và npm
-- MongoDB
-- Redis (cần cho hàng đợi gửi email)
-
-Cài dependency:
+Yêu cầu: Node.js, MongoDB và Redis.
 
 ```bash
 npm install
+npm run dev
 ```
 
-Tạo file `.env` ở thư mục gốc:
+Chạy email worker ở terminal khác:
+
+```bash
+npm run dev:worker
+```
+
+Backend mặc định chạy tại `http://localhost:3000`, API base URL là:
+
+```text
+http://localhost:3000/api/v1
+```
+
+## Cấu hình môi trường
+
+Sao chép `.env.example` thành `.env` và điền các giá trị cần thiết:
 
 ```env
 NODE_ENV=development
 HOST=localhost
 PORT=3000
-CLIENT_URL=http://localhost:5173
+CLIENT_URL=
 
 MONGO_URI=mongodb://localhost:27017/quiz-learning
 SALT_ROUNDS=10
@@ -65,278 +45,182 @@ JWT_EXPIRESIN_REFRESH=7d
 
 REDIS_HOST=localhost
 REDIS_PORT=6379
-REDIS_USERNAME=
-REDIS_PASSWORD=
 
-EMAIL_USER=
-EMAIL_PASS=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_CALLBACK_URL=http://localhost:3000/api/v1/auth/google-callback
 ```
 
-`CLIENT_URL` phải đúng origin của Frontend. Ví dụ Vite thường chạy tại `http://localhost:5173`.
+Google Cloud Console phải khai báo chính xác `GOOGLE_CALLBACK_URL` trong **Authorized redirect URIs**.
 
-Chạy API:
+## Quy ước xác thực cho Frontend
 
-```bash
-npm run dev
-```
+- Access token nằm trong `data.accessToken` của response.
+- Frontend gửi access token bằng header `Authorization: Bearer <accessToken>`.
+- Refresh token được Backend lưu trong cookie `HttpOnly`; không lưu refresh token vào localStorage.
+- Request cần cookie phải bật `credentials: 'include'` hoặc Axios `withCredentials: true`.
+- Khi API trả `401`, Frontend gọi refresh token một lần rồi thử lại request cũ.
 
-Chạy email worker ở terminal khác:
-
-```bash
-npm run dev:worker
-```
-
-Kiểm tra Backend:
-
-```text
-GET http://localhost:3000/
-```
-
-Kết quả mong đợi: `Backend Server for Quiz Learning is running!`
-
-## 3. Danh sách API hiện có
-
-| Method | Endpoint                  | Cần access token | Cần refresh cookie | Mô tả                         |
-| ------ | ------------------------- | ---------------- | -------------------- | ----------------------------- |
-| POST   | `/auth/register`          | Không            | Không                | Đăng ký và đăng nhập          |
-| POST   | `/auth/login`             | Không            | Không                | Đăng nhập                     |
-| POST   | `/auth/refresh-token`     | Không            | Có                   | Lấy access token mới          |
-| POST   | `/auth/logout`            | Không            | Có                   | Đăng xuất phiên hiện tại      |
-| POST   | `/auth/logout-all`        | Có               | Không bắt buộc        | Đăng xuất trên mọi thiết bị   |
-| GET    | `/users/example`          | Không            | Không                | Endpoint thử nghiệm           |
-
-Mọi endpoint trong bảng được nối với Base URL. Ví dụ:
-
-```text
-http://localhost:3000/api/v1/auth/login
-```
-
-## 4. Chi tiết API Auth
-
-### Đăng ký
-
-```http
-POST /api/v1/auth/register
-Content-Type: application/json
-```
-
-Body:
+Response thành công:
 
 ```json
 {
-  "email": "user@example.com",
-  "password": "123456",
-  "displayName": "Nguyễn Văn A"
+  "statusCode": 200,
+  "message": "Thông báo",
+  "data": {}
 }
 ```
 
-Validation:
-
-- `email`: bắt buộc, đúng định dạng email.
-- `password`: bắt buộc, tối thiểu 6 ký tự.
-- `displayName`: bắt buộc.
-
-Thành công — `201 Created`:
+Response lỗi:
 
 ```json
 {
-  "statusCode": 201,
-  "message": "Đăng ký thành công.",
+  "statusCode": 400,
+  "message": "Nội dung lỗi"
+}
+```
+
+## Danh sách API hiện có
+
+| Method | Endpoint | Xác thực | Chức năng |
+| --- | --- | --- | --- |
+| POST | `/auth/register` | Không | Đăng ký tài khoản |
+| POST | `/auth/login` | Không | Đăng nhập email/mật khẩu |
+| GET | `/auth/google` | Không | Bắt đầu Google OAuth |
+| GET | `/auth/google-callback` | Google | Callback Google đang cấu hình |
+| GET | `/auth/google/callback` | Google | Callback Google dạng chuẩn |
+| POST | `/auth/refresh-token` | Refresh cookie | Làm mới access token |
+| POST | `/auth/logout` | Refresh cookie | Đăng xuất phiên hiện tại |
+| POST | `/auth/logout-all` | Bearer token | Đăng xuất mọi thiết bị |
+| POST | `/auth/change-password` | Bearer token | Đổi mật khẩu |
+| POST | `/auth/forgot-password` | Không | Gửi OTP khôi phục mật khẩu |
+| POST | `/auth/reset-password` | Không | Đặt lại mật khẩu bằng OTP |
+| GET | `/users/me` | Bearer token | Lấy hồ sơ hiện tại |
+| PUT | `/users/me` | Bearer token | Cập nhật hồ sơ hiện tại |
+
+## Google Login
+
+Mở URL sau bằng trình duyệt:
+
+```text
+http://localhost:3000/api/v1/auth/google
+```
+
+Khi chưa có Frontend, đăng nhập thành công trả trực tiếp:
+
+```json
+{
+  "statusCode": 200,
+  "message": "Đăng nhập Google thành công.",
   "data": {
     "accessToken": "<JWT>"
   }
 }
 ```
 
-Backend đồng thời đặt refresh token vào cookie. Nếu email đã tồn tại, Backend trả `409 Conflict`.
+Refresh token đồng thời được đặt vào cookie `HttpOnly`.
 
-### Đăng nhập
+Khi có Frontend, tìm comment `FE TODO` trong `src/controllers/client/auth.controller.js` để thay response JSON bằng redirect tới trang xử lý đăng nhập. Các route dành cho FE được đánh dấu bằng comment `FE:` trong `src/routers/client/auth.route.js`.
+
+## Đổi và khôi phục mật khẩu
+
+Đổi mật khẩu:
 
 ```http
-POST /api/v1/auth/login
+POST /api/v1/auth/change-password
+Authorization: Bearer <accessToken>
 Content-Type: application/json
+
+{
+  "oldPassword": "old-password",
+  "newPassword": "new-password",
+  "logoutOtherDevices": true
+}
 ```
 
-Body:
+Yêu cầu OTP:
 
-```json
+```http
+POST /api/v1/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+Đặt lại mật khẩu:
+
+```http
+POST /api/v1/auth/reset-password
+Content-Type: application/json
+
 {
   "email": "user@example.com",
-  "password": "123456"
+  "otp": "123456",
+  "newPassword": "new-password"
 }
 ```
 
-Thành công — `200 OK`:
+Sau khi đặt lại mật khẩu, mọi session cũ của người dùng bị thu hồi.
 
-```json
-{
-  "statusCode": 200,
-  "message": "Đăng nhập thành công.",
-  "data": {
-    "accessToken": "<JWT>"
-  }
-}
-```
+## Hồ sơ người dùng
 
-Sai email hoặc mật khẩu trả `401 Unauthorized`.
-
-### Làm mới access token
+Lấy hồ sơ:
 
 ```http
-POST /api/v1/auth/refresh-token
-```
-
-Không gửi body. Trình duyệt tự gửi refresh cookie khi request bật `credentials`.
-
-Thành công — `200 OK`:
-
-```json
-{
-  "statusCode": 200,
-  "message": "Cấp token mới thành công.",
-  "data": {
-    "accessToken": "<JWT mới>"
-  }
-}
-```
-
-Backend thực hiện refresh-token rotation: refresh token cũ bị thay bằng refresh token mới sau mỗi lần refresh.
-
-### Đăng xuất phiên hiện tại
-
-```http
-POST /api/v1/auth/logout
-```
-
-Frontend cần gửi cookie. Backend xóa session tương ứng và xóa refresh cookie.
-
-### Đăng xuất mọi thiết bị
-
-```http
-POST /api/v1/auth/logout-all
+GET /api/v1/users/me
 Authorization: Bearer <accessToken>
 ```
 
-Backend xóa tất cả refresh session của người dùng. Frontend cũng nên xóa access token đang giữ.
+Cập nhật hồ sơ:
 
-## 5. Cấu hình request phía Frontend
+```http
+PUT /api/v1/users/me
+Authorization: Bearer <accessToken>
+Content-Type: application/json
 
-### Fetch
+{
+  "displayName": "Tên mới",
+  "avatarUrl": "https://example.com/avatar.png",
+  "defaultQuizSize": 20
+}
+```
+
+Chỉ các trường `displayName`, `avatarUrl` và `defaultQuizSize` được cập nhật.
+
+## Ví dụ gọi API từ Frontend
 
 ```js
-const API_URL = 'http://localhost:3000/api/v1'
+const apiUrl = 'http://localhost:3000/api/v1'
 
 export async function login(email, password) {
-  const res = await fetch(`${API_URL}/auth/login`, {
+  const res = await fetch(`${apiUrl}/auth/login`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify({ email, password })
   })
 
   const result = await res.json()
-
-  if (!res.ok) {
-    throw new Error(result.message || 'Đăng nhập thất bại')
-  }
-
+  if (!res.ok) throw new Error(result.message)
   return result.data.accessToken
 }
 ```
 
-Gọi endpoint cần xác thực:
+## Postman
 
-```js
-const res = await fetch(`${API_URL}/auth/logout-all`, {
-  method: 'POST',
-  headers: {
-    Authorization: `Bearer ${accessToken}`
-  },
-  credentials: 'include'
-})
-```
-
-Làm mới token:
-
-```js
-export async function refreshAccessToken() {
-  const res = await fetch(`${API_URL}/auth/refresh-token`, {
-    method: 'POST',
-    credentials: 'include'
-  })
-
-  const result = await res.json()
-  if (!res.ok) throw new Error(result.message || 'Phiên đăng nhập đã hết hạn')
-
-  return result.data.accessToken
-}
-```
-
-### Axios
-
-```js
-import axios from 'axios'
-
-export const api = axios.create({
-  baseURL: 'http://localhost:3000/api/v1',
-  withCredentials: true
-})
-
-export function setAccessToken(accessToken) {
-  if (accessToken) {
-    api.defaults.headers.common.Authorization = `Bearer ${accessToken}`
-  } else {
-    delete api.defaults.headers.common.Authorization
-  }
-}
-```
-
-Không gửi refresh token trong body hoặc lưu refresh token vào `localStorage`; cookie `httpOnly` đã xử lý phần này.
-
-## 6. Luồng đăng nhập đề xuất
-
-1. FE gọi `/auth/login` hoặc `/auth/register` với `credentials: 'include'`.
-2. FE nhận `data.accessToken` và giữ trong state của ứng dụng.
-3. Với API được bảo vệ, FE gửi access token trong header Bearer.
-4. Khi access token hết hạn và API trả `401`, FE gọi `/auth/refresh-token` một lần.
-5. Nếu refresh thành công, cập nhật access token và gọi lại request cũ.
-6. Nếu refresh thất bại, xóa trạng thái đăng nhập và chuyển người dùng về màn hình đăng nhập.
-
-Tránh để nhiều request `401` gọi refresh đồng thời; nên dùng chung một refresh promise hoặc interceptor có cơ chế khóa.
-
-## 7. Mã trạng thái FE cần xử lý
-
-| Status | Ý nghĩa thường gặp                                      |
-| ------ | ------------------------------------------------------- |
-| 200    | Request thành công                                      |
-| 201    | Đăng ký thành công                                      |
-| 400    | Body không hợp lệ                                       |
-| 401    | Sai thông tin đăng nhập, token thiếu/hết hạn/không hợp lệ |
-| 404    | Endpoint hoặc tài nguyên không tồn tại                  |
-| 409    | Email đã tồn tại                                        |
-| 500    | Lỗi Backend                                              |
-
-FE nên kiểm tra HTTP status và đọc `message`; không nên chỉ dựa vào nội dung chuỗi thông báo.
-
-## 8. Postman
-
-Collection có sẵn tại `postman/auth.collection.json`.
-
-Import file này vào Postman, đặt biến `baseUrl` là:
+Import collection:
 
 ```text
-http://localhost:3000/api/v1
+postman/auth.collection.json
 ```
 
-Collection tự lưu access token sau khi đăng ký hoặc đăng nhập. Postman cũng cần giữ cookie để test refresh và logout.
+Collection sử dụng:
 
-## 9. Giới hạn hiện tại
+- `baseUrl`: `http://localhost:3000/api/v1`
+- `accessToken`: tự lưu sau đăng ký hoặc đăng nhập
+- Cookie jar của Postman: tự lưu refresh token
+- `otp`: nhập OTP nhận được qua email trước khi chạy Reset Password
 
-- Chưa có API lấy thông tin người dùng hiện tại như `/users/me`.
-- Chưa có API Folder, Deck, Flashcard, Quiz hoặc tiến độ học được mount trong router.
-- `/users/example` chỉ là endpoint mẫu và hiện không yêu cầu đăng nhập.
-- Một số thông báo tiếng Việt trong mã nguồn Backend đang bị lỗi mã hóa; FE nên ưu tiên xử lý theo `statusCode` cho đến khi Backend sửa các chuỗi này.
-- Production dùng cookie `secure` và `sameSite: 'none'`, vì vậy Backend phải chạy qua HTTPS.
-
+Google Login là OAuth redirect nên request Postman được cấu hình không tự theo redirect; hãy mở giá trị header `Location` trong trình duyệt để đăng nhập.

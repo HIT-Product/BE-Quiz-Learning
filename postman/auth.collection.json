@@ -1,134 +1,458 @@
 {
   "info": {
-    "name": "Auth API",
+    "name": "HITProduct API",
+    "_postman_id": "hit-product-api-v1",
+    "description": "Bo test Auth va User. Register/Login tu luu accessToken; refreshToken nam trong cookie HttpOnly. Forgot Password gui OTP; dien bien otp truoc khi Reset Password. Google Login tra redirect de mo trong trinh duyet.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:3000/api/v1"
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
     },
     {
       "key": "accessToken",
-      "value": ""
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "otp",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
     {
-      "name": "Register",
-      "event": [
+      "name": "Auth",
+      "description": "Cac endpoint xac thuc nguoi dung: dang ky, dang nhap, lam moi token, dang xuat. refreshToken duoc quan ly qua httpOnly cookie.",
+      "item": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "const res = pm.response.json();",
-              "if (res.data && res.data.accessToken) {",
-              "  pm.collectionVariables.set('accessToken', res.data.accessToken);",
-              "}"
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"123456\",\n  \"displayName\": \"Test User\"\n}"
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"displayName\": \"Nguyen Van A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Dang ky tai khoan moi. Dang ky xong la dang nhap luon (issue tokens + tao session).\n\n**Validation:**\n- `email`: bat buoc, phai la email hop le\n- `password`: bat buoc, toi thieu 6 ky tu\n- `displayName`: bat buoc, khong duoc de trong\n\n**Response 201:**\n```json\n{\n  \"statusCode\": 201,\n  \"message\": \"Dang ky thanh cong.\",\n  \"data\": { \"accessToken\": \"<jwt>\" }\n}\n```\nHeader tra ve co `Set-Cookie: refreshToken=...; HttpOnly; Path=/api/v1/auth`.\n\n**Errors:**\n- `400`: Validation that bai\n- `409`: Email da ton tai"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "  console.log('accessToken da duoc luu.');",
+                  "}",
+                  "",
+                  "pm.test(\"Body chi co accessToken (khong lo refreshToken)\", () => {",
+                  "  pm.expect(json.data).to.have.property('accessToken');",
+                  "  pm.expect(json.data).to.not.have.property('refreshToken');",
+                  "});",
+                  "",
+                  "pm.test(\"Co cookie refreshToken (HttpOnly)\", () => {",
+                  "  pm.expect(pm.cookies.has('refreshToken')).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         },
-        "url": {
-          "raw": "{{baseUrl}}/auth/register",
-          "host": ["{{baseUrl}}"],
-          "path": ["auth", "register"]
-        }
-      }
-    },
-    {
-      "name": "Login",
-      "event": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "const res = pm.response.json();",
-              "if (res.data && res.data.accessToken) {",
-              "  pm.collectionVariables.set('accessToken', res.data.accessToken);",
-              "}"
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"123456\"\n}"
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Dang nhap. Body tra ve accessToken, refreshToken nam trong httpOnly cookie.\n\nScript tu dong luu `accessToken` vao bien collection.\n\n**Response 200:**\n```json\n{\n  \"statusCode\": 200,\n  \"message\": \"Dang nhap thanh cong.\",\n  \"data\": { \"accessToken\": \"<jwt>\" }\n}\n```\n\n**Errors:**\n- `400`: Validation that bai\n- `401`: Email hoac mat khau khong dung"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "  console.log('accessToken da duoc luu.');",
+                  "}",
+                  "",
+                  "pm.test(\"Co accessToken, khong co refreshToken trong body\", () => {",
+                  "  pm.expect(json.data).to.have.property('accessToken');",
+                  "  pm.expect(json.data).to.not.have.property('refreshToken');",
+                  "});",
+                  "",
+                  "pm.test(\"Co cookie refreshToken (HttpOnly)\", () => {",
+                  "  pm.expect(pm.cookies.has('refreshToken')).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         },
-        "url": {
-          "raw": "{{baseUrl}}/auth/login",
-          "host": ["{{baseUrl}}"],
-          "path": ["auth", "login"]
-        }
-      }
-    },
-    {
-      "name": "Refresh Token",
-      "event": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "const res = pm.response.json();",
-              "if (res.data && res.data.accessToken) {",
-              "  pm.collectionVariables.set('accessToken', res.data.accessToken);",
-              "}"
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/auth/refresh-token",
+            "description": "Lay accessToken moi khi accessToken het han. KHONG can body: server doc refreshToken tu cookie (Postman tu gui cookie).\n\nAp dung token rotation: refreshToken cu bi vo hieu, cookie duoc cap moi qua Set-Cookie.\n\n**Response 200:**\n```json\n{\n  \"statusCode\": 200,\n  \"message\": \"Cap token moi thanh cong.\",\n  \"data\": { \"accessToken\": \"<jwt_moi>\" }\n}\n```\n\n**Errors:**\n- `401`: Thieu cookie / token khong hop le / het han / session khong ton tai"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "  console.log('accessToken moi da duoc cap nhat.');",
+                  "}",
+                  "",
+                  "pm.test(\"Co accessToken moi\", () => {",
+                  "  pm.expect(json.data).to.have.property('accessToken');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/auth/logout",
+            "description": "Dang xuat khoi thiet bi hien tai. KHONG can body: server doc refreshToken tu cookie, xoa session tuong ung va clear cookie.\n\n**Response 200:**\n```json\n{\n  \"statusCode\": 200,\n  \"message\": \"Dang xuat thanh cong.\"\n}\n```"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('accessToken', '');",
+                  "  console.log('accessToken da duoc xoa khoi bien.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout All Devices",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
-            "type": "text/javascript"
-          }
+            "url": "{{baseUrl}}/auth/logout-all",
+            "description": "Dang xuat khoi TAT CA thiet bi (xoa toan bo session cua nguoi dung) va clear cookie.\n\n**Yeu cau xac thuc:** `Authorization: Bearer {{accessToken}}`\n\n**Response 200:**\n```json\n{\n  \"statusCode\": 200,\n  \"message\": \"Dang xuat tat ca thiet bi thanh cong.\"\n}\n```\n\n**Errors:**\n- `401`: Thieu hoac accessToken khong hop le / het han"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('accessToken', '');",
+                  "  console.log('Tat ca tokens da duoc xoa.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oldPassword\": \"password123\",\n  \"newPassword\": \"matkhaumoi123\",\n  \"logoutOtherDevices\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/auth/change-password",
+            "description": "??i m?t kh?u v? t?y ch?n ??ng xu?t c?c thi?t b? kh?c. Session hi?n t?i ???c gi? l?i. Y?u c?u access token c? sessionId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test(\"C? c? loggedOutOtherDevices\", () => {",
+                  "  pm.expect(json.data).to.have.property(\"loggedOutOtherDevices\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/forgot-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Gui OTP dat lai mat khau. Response khong lam lo email co ton tai."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/reset-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"otp\": \"{{otp}}\",\n  \"newPassword\": \"newPassword123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Dat lai mat khau bang OTP. Dien bien collection {{otp}} tu email."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Google Login - Start OAuth",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/auth/google",
+            "description": "Khong tu theo redirect. Mo header Location trong trinh duyet; callback tra JSON accessToken va dat refreshToken cookie."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Redirect 302 sang Google\", () => pm.response.to.have.status(302));",
+                  "pm.test(\"Co Google Location\", () => {",
+                  "  pm.expect(pm.response.headers.get(\"Location\")).to.include(\"accounts.google.com\");",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/auth/refresh-token",
-          "host": ["{{baseUrl}}"],
-          "path": ["auth", "refresh-token"]
-        }
-      }
+      ]
     },
     {
-      "name": "Logout",
-      "request": {
-        "method": "POST",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/auth/logout",
-          "host": ["{{baseUrl}}"],
-          "path": ["auth", "logout"]
+      "name": "Users",
+      "description": "API ho so; can Bearer {{accessToken}}.",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/users/me",
+            "description": "Lay ho so nguoi dung hien tai; khong tra passwordHash."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Khong lo passwordHash\", () => {",
+                  "  pm.expect(pm.response.json().data).to.not.have.property(\"passwordHash\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/users/me",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Updated User\",\n  \"avatarUrl\": \"https://example.com/avatar.png\",\n  \"defaultQuizSize\": 20\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Cap nhat displayName, avatarUrl va defaultQuizSize."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Profile duoc cap nhat\", () => {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.expect(data.displayName).to.eql(\"Updated User\");",
+                  "  pm.expect(data.defaultQuizSize).to.eql(20);",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
-      }
+      ]
     },
     {
-      "name": "Logout All",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
-        ],
-        "url": {
-          "raw": "{{baseUrl}}/auth/logout-all",
-          "host": ["{{baseUrl}}"],
-          "path": ["auth", "logout-all"]
+      "name": "_Health Check",
+      "description": "Kiem tra server dang chay.",
+      "item": [
+        {
+          "name": "Ping Server",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:3000/",
+            "description": "Kiem tra server co dang chay khong. Khong co prefix /api/v1."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Server dang chay\", () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         }
-      }
+      ]
     }
   ]
 }
