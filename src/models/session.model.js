@@ -21,6 +21,7 @@ const sessionSchema = new mongoose.Schema(
   }
 )
 
+sessionSchema.index({ userId: 1 })
 sessionSchema.index({ tokenHash: 1 })
 sessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 })
 

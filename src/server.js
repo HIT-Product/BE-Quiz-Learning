@@ -8,9 +8,12 @@ import cookieParser from 'cookie-parser'
 import { fileURLToPath } from 'url'
 import router from './routers/index.js'
 import { logger, response } from './utils/index.js'
-import { envConfig, connectDB } from './configs/index.js'
+import { envConfig, connectDB, passport } from './configs/index.js'
 import { errorMiddleware, morganMiddleware } from './middlewares/index.js'
 import { StatusCodes } from 'http-status-codes'
+
+// Đăng ký Google OAuth Strategy trước khi nhận request.
+import './configs/passport.config.js'
 
 const app = express()
 
@@ -32,6 +35,7 @@ app.use(
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(cookieParser())
+app.use(passport.initialize())
 
 app.set('trust proxy', true)
 

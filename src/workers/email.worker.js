@@ -25,7 +25,24 @@ const emailWorker = new Worker(
         pass: envConfig.email.pass
       }
     })
-
+    // === Chức năng: Gửi email chứa OTP khôi phục mật khẩu ===
+    if (job.name === 'reset-password') {
+      const { email, displayName, otp } = job.data
+      await transporter.sendMail({
+        from: envConfig.email.user,
+        to: email,
+        subject: 'Ma khoi phuc mat khau Quiz Learning',
+        html: `
+          <h2>Xin chao ${displayName}!</h2>
+          <p>Ma OTP khoi phuc mat khau cua ban la:</p>
+          <h1>${otp}</h1>
+          <p>Ma co hieu luc trong 10 phut. Neu ban khong yeu cau, hay bo qua email nay.</p>
+        `
+      })
+      logger.info(`Reset password OTP sent to ${email}`)
+      return
+    }
+    // === Chức năng: Gửi email chào mừng người dùng mới ===
     await transporter.sendMail({
       from: envConfig.email.user,
       to: email,
