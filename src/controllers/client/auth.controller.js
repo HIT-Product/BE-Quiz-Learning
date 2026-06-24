@@ -1,7 +1,8 @@
 import { StatusCodes } from 'http-status-codes'
-import { catchAsync, response, ApiError, refreshCookieOptions } from '../../utils/index.js'
-import { authService } from '../../services/client/index.js'
 
+import { envConfig } from '../../configs/index.js'
+import { authService } from '../../services/client/index.js'
+import { catchAsync, response, ApiError, refreshCookieOptions } from '../../utils/index.js'
 // === Chức năng: Đăng ký tài khoản ===
 const register = catchAsync(async (req, res) => {
   const { email, password, displayName } = req.body
@@ -11,7 +12,6 @@ const register = catchAsync(async (req, res) => {
   res.cookie('refreshToken', refreshToken, refreshCookieOptions)
   return res.status(StatusCodes.CREATED).json(response(StatusCodes.CREATED, 'Đăng ký thành công.', { accessToken }))
 })
-
 // === Chức năng: Đăng nhập bằng email và mật khẩu ===
 const login = catchAsync(async (req, res) => {
   const { email, password } = req.body
@@ -21,7 +21,6 @@ const login = catchAsync(async (req, res) => {
   res.cookie('refreshToken', refreshToken, refreshCookieOptions)
   return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Đăng nhập thành công.', { accessToken }))
 })
-
 // === Chức năng: Làm mới access token ===
 const refreshToken = catchAsync(async (req, res) => {
   const token = req.cookies.refreshToken
@@ -44,7 +43,6 @@ const logout = catchAsync(async (req, res) => {
   res.clearCookie('refreshToken', refreshCookieOptions)
   return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Đăng xuất thành công.'))
 })
-
 // === Chức năng: Đăng xuất khỏi tất cả thiết bị ===
 const logoutAll = catchAsync(async (req, res) => {
   await authService.logoutAll(req.user._id)
@@ -52,7 +50,6 @@ const logoutAll = catchAsync(async (req, res) => {
   res.clearCookie('refreshToken', refreshCookieOptions)
   return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Đăng xuất tất cả thiết bị thành công.'))
 })
-
 // === Chức năng: Đổi mật khẩu ===
 const changePassword = catchAsync(async (req, res) => {
   const { oldPassword, newPassword, logoutOtherDevices = true } = req.body
@@ -71,37 +68,36 @@ const changePassword = catchAsync(async (req, res) => {
 
   return res.status(StatusCodes.OK).json(response(StatusCodes.OK, message, result))
 })
-
 // === Chức năng: Gửi OTP khôi phục mật khẩu ===
 const forgotPassword = catchAsync(async (req, res) => {
   await authService.forgotPassword(req.body)
-  // Thong bao chung, khong tiet lo email co ton tai khong
   return res
     .status(StatusCodes.OK)
     .json(response(StatusCodes.OK, 'Neu email ton tai, ma OTP da duoc gui. Vui long kiem tra hop thu.'))
 })
-
 // === Chức năng: Đặt lại mật khẩu bằng OTP ===
 const resetPassword = catchAsync(async (req, res) => {
   await authService.resetPassword(req.body)
-  return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Dat lai mat khau thanh cong. Vui long dang nhap lai.'))
-})
-
-// === Chức năng: Hoàn tất đăng nhập Google ===
-const googleCallback = catchAsync(async (req, res) => {
-  const { accessToken, refreshToken } = req.user
-
-  res.cookie('refreshToken', refreshToken, refreshCookieOptions)
-
-  // FE TODO: Khi có frontend, thay response JSON bằng redirect tới trang xử lý đăng nhập.
   return res
     .status(StatusCodes.OK)
-    .json(response(StatusCodes.OK, 'Đăng nhập Google thành công.', { accessToken }))
+    .json(response(StatusCodes.OK, 'Dat lai mat khau thanh cong. Vui long dang nhap lai.'))
 })
 
-// === Chức năng: Trả lỗi khi Google OAuth thất bại ===
-const googleFailure = (req, res) =>
-  res.status(StatusCodes.UNAUTHORIZED).json(response(StatusCodes.UNAUTHORIZED, 'Đăng nhập Google thất bại.'))
+const googleCallback = catchAsync(async (req, res) => {
+  try {
+    const { accessToken, refreshToken } = await authService.googleLogin(req.user)
+
+    res.cookie('refreshToken', refreshToken, refreshCookieOptions)
+
+    return res.redirect(
+      envConfig.server.clientUrl + '/auth/login?success=true&accessToken=' + encodeURIComponent(accessToken)
+    )
+  } catch (error) {
+    return res.redirect(
+      envConfig.server.clientUrl + '/auth/login?success=false&message=' + encodeURIComponent(error.message)
+    )
+  }
+})
 
 export default {
   register,
@@ -112,6 +108,5 @@ export default {
   changePassword,
   forgotPassword,
   resetPassword,
-  googleCallback,
-  googleFailure
+  googleCallback
 }

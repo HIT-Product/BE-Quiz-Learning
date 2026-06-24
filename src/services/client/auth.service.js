@@ -1,12 +1,12 @@
-import crypto from 'node:crypto'
-import mongoose from 'mongoose'
 import bcrypt from 'bcrypt'
+import mongoose from 'mongoose'
+import crypto from 'node:crypto'
 import { StatusCodes } from 'http-status-codes'
 
-import { userModel, sessionModel, passwordResetModel } from '../../models/index.js'
+import { envConfig } from '../../configs/index.js'
 import { emailQueue } from '../../queues/index.js'
 import { ApiError, hashToken, jwtUtils, logger } from '../../utils/index.js'
-import { envConfig } from '../../configs/index.js'
+import { userModel, sessionModel, passwordResetModel } from '../../models/index.js'
 // === Dùng chung: Tạo cặp token và lưu phiên đăng nhập ===
 const issueTokens = async (user) => {
   const session = new sessionModel({ userId: user._id })
@@ -53,7 +53,6 @@ const login = async ({ email, password }) => {
 
   return issueTokens(user)
 }
-
 // === Chức năng: Xoay vòng refresh token ===
 const refreshToken = async (token) => {
   let payload
@@ -138,24 +137,16 @@ const OTP_TTL_MS = 10 * 60 * 1000 // 10 phut
 // === Chức năng: Tạo và gửi OTP khôi phục mật khẩu ===
 const forgotPassword = async ({ email }) => {
   const user = await userModel.findOne({ email })
-
-  // Luon tra ve nhu nhau de khong lo email co ton tai hay khong
   if (!user) {
     return
   }
-
-  // Sinh OTP 6 chu so
   const otp = crypto.randomInt(100000, 1000000).toString()
-
-  // Xoa OTP cu cua user (neu co) roi tao moi
   await passwordResetModel.deleteMany({ userId: user._id })
   await passwordResetModel.create({
     userId: user._id,
     otpHash: hashToken(otp),
     expiresAt: new Date(Date.now() + OTP_TTL_MS)
   })
-
-  // Day job gui email (xu ly o worker, khong chan response)
   try {
     await emailQueue.add('reset-password', {
       email: user.email,
@@ -181,22 +172,19 @@ const resetPassword = async ({ email, otp, newPassword }) => {
   if (record.otpHash !== hashToken(otp)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'OTP khong hop le hoac da het han.')
   }
-
-  // Dat mat khau moi
   user.passwordHash = await bcrypt.hash(newPassword, envConfig.bcrypt.saltRounds)
   await user.save()
-
-  // Don dep: xoa OTP da dung + huy het session cu
   await passwordResetModel.deleteMany({ userId: user._id })
   await sessionModel.deleteMany({ userId: user._id })
 }
-// === Dùng chung: Tạo mật khẩu nội bộ cho tài khoản Google ===
 const generateGooglePassword = () => {
-  // tron random + thoi diem tao -> moi user mot chuoi khac nhau
-  return `google_${crypto.randomBytes(32).toString('hex')}_${Date.now()}`
+  return 'google_' + crypto.randomBytes(32).toString('hex') + '_' + Date.now()
 }
-// === Chức năng: Đăng nhập hoặc đăng ký bằng Google ===
 const googleLogin = async (profile) => {
+  if (!profile) {
+    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Xác thực Google thất bại.')
+  }
+
   const rawEmail = profile.emails?.find(({ verified }) => verified)?.value || profile.emails?.[0]?.value
 
   if (!rawEmail?.trim()) {
@@ -209,7 +197,6 @@ const googleLogin = async (profile) => {
 
   let user = await userModel.findOne({ email })
 
-  // Chua co -> tao moi, tu sinh passwordHash
   if (!user) {
     const rawPassword = generateGooglePassword()
     const passwordHash = await bcrypt.hash(rawPassword, envConfig.bcrypt.saltRounds)
@@ -221,7 +208,6 @@ const googleLogin = async (profile) => {
       avatarUrl
     })
 
-    // Tai su dung email chao mung nhu luong register
     try {
       await emailQueue.add('welcome', { email: user.email, displayName: user.displayName })
     } catch (err) {
@@ -229,7 +215,6 @@ const googleLogin = async (profile) => {
     }
   }
 
-  // Phat hanh token giong het login/register
   return issueTokens(user)
 }
 
