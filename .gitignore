@@ -24,7 +24,6 @@ dist
 
 # Log
 logs
-.tmp-*.log
 
 # Static
 uploads/*
@@ -32,8 +31,5 @@ images/*
 static/*
 errors/*
 docker/*
-
-# Personal notes / scratch files
-.note/
-Untitled.png
-*.png
+logs/*
+**/*.json
