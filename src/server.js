@@ -58,8 +58,6 @@ app.use(errorMiddleware.errorHandler)
 
 connectDB()
   .then(() => {
-    initWorkers()
-
     app.listen(envConfig.server.port, () => {
       logger.info(`Server is running on ${envConfig.server.host}:${envConfig.server.port}`)
     })
