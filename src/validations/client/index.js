@@ -1,3 +1,4 @@
 import authValidation from './auth.validation.js'
+import userValidation from './user.validation.js'
 
-export { authValidation }
+export { authValidation, userValidation }

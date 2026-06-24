@@ -7,14 +7,16 @@ const extractToken = (req) => {
   return authHeader.split(' ')[1] || null
 }
 
-const generateAccessToken = (user) => {
-  return jwt.sign({ _id: user._id, email: user.email }, envConfig.jwt.secretLogin, {
+const generateAccessToken = (user, sessionId) => {
+  return jwt.sign({ _id: user._id, email: user.email, sessionId: sessionId.toString() }, envConfig.jwt.secretLogin, {
     expiresIn: envConfig.jwt.expiresInLogin
   })
 }
 
-const generateRefreshToken = (user) => {
-  return jwt.sign({ _id: user._id }, envConfig.jwt.secretRefresh, { expiresIn: envConfig.jwt.expiresInRefresh })
+const generateRefreshToken = (user, sessionId) => {
+  return jwt.sign({ _id: user._id, sessionId: sessionId.toString() }, envConfig.jwt.secretRefresh, {
+    expiresIn: envConfig.jwt.expiresInRefresh
+  })
 }
 
 const verifyAccessToken = (token) => {

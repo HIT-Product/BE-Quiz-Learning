@@ -15,7 +15,32 @@ const login = {
   })
 }
 
+const changePassword = {
+  body: Joi.object({
+    oldPassword: Joi.string().required(),
+    newPassword: Joi.string().min(6).required(),
+    logoutOtherDevices: Joi.boolean().default(true)
+  })
+}
+
+const forgotPassword = {
+  body: Joi.object({
+    email: Joi.string().email().required()
+  })
+}
+
+const resetPassword = {
+  body: Joi.object({
+    email: Joi.string().email().required(),
+    otp: Joi.string().length(6).required(),
+    newPassword: Joi.string().min(6).required()
+  })
+}
+
 export default {
   register,
-  login
+  login,
+  changePassword,
+  forgotPassword,
+  resetPassword
 }
