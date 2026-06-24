@@ -1,41 +1,62 @@
 # HITProduct Backend API
 
-Backend cho hệ thống Quiz Learning, xây dựng bằng Express, MongoDB, Redis và JWT.
+Backend API cho hệ thống Quiz Learning, xây dựng bằng Node.js, Express, MongoDB và Redis.
 
-## Chạy dự án
+## Công nghệ chính
 
-Yêu cầu: Node.js, MongoDB và Redis.
+- Node.js và Express
+- MongoDB/Mongoose
+- Redis, BullMQ và worker xử lý email
+- JWT, cookie HttpOnly và Google OAuth 2.0
+- PM2 để quản lý API và worker trong môi trường production
+
+## Yêu cầu hệ thống
+
+- Node.js và npm
+- MongoDB
+- Redis
+- PM2 (khi triển khai production)
+
+## Cài đặt project
 
 ```bash
-npm install
-npm run dev
+git clone https://github.com/HIT-Product/BE-Quiz-Learning.git
+cd BE-Quiz-Learning
+npm ci
 ```
 
-Chạy email worker ở terminal khác:
+Tạo file môi trường:
 
 ```bash
-npm run dev:worker
+cp .env.example .env
 ```
 
-Backend mặc định chạy tại `http://localhost:3000`, API base URL là:
+Trên Windows PowerShell:
 
-```text
-http://localhost:3000/api/v1
+```powershell
+Copy-Item .env.example .env
 ```
 
-## Cấu hình môi trường
-
-Sao chép `.env.example` thành `.env` và điền các giá trị cần thiết:
+Điền đầy đủ giá trị trong `.env`:
 
 ```env
+# Server
 NODE_ENV=development
 HOST=localhost
 PORT=3000
-CLIENT_URL=
+CLIENT_URL=http://localhost:5173
 
+# Database
 MONGO_URI=mongodb://localhost:27017/quiz-learning
+
+# Bcrypt
 SALT_ROUNDS=10
 
+# Email
+EMAIL_USER=
+EMAIL_PASS=
+
+# JWT
 JWT_SECRET_LOGIN=replace-with-a-long-random-secret
 JWT_SECRET_OTP=replace-with-a-long-random-secret
 JWT_SECRET_REFRESH=replace-with-a-long-random-secret
@@ -43,9 +64,18 @@ JWT_EXPIRESIN_LOGIN=15m
 JWT_EXPIRESIN_OTP=5m
 JWT_EXPIRESIN_REFRESH=7d
 
+# Redis
 REDIS_HOST=localhost
 REDIS_PORT=6379
+REDIS_USERNAME=
+REDIS_PASSWORD=
 
+# Cloudinary
+CLOUD_NAME=
+API_KEY=
+API_SECRET=
+
+# Google OAuth
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_CALLBACK_URL=http://localhost:3000/api/v1/auth/google-callback
@@ -53,13 +83,108 @@ GOOGLE_CALLBACK_URL=http://localhost:3000/api/v1/auth/google-callback
 
 Google Cloud Console phải khai báo chính xác `GOOGLE_CALLBACK_URL` trong **Authorized redirect URIs**.
 
+## Chạy ở môi trường phát triển
+
+Khởi động API:
+
+```bash
+npm run dev
+```
+
+Mở terminal khác để khởi động email worker:
+
+```bash
+npm run dev:worker
+```
+
+Mặc định:
+
+- Server: `http://localhost:3000`
+- API base URL: `http://localhost:3000/api/v1`
+
+## Chạy production bằng PM2
+
+Project có sẵn [ecosystem.config.cjs](./ecosystem.config.cjs) để quản lý hai tiến trình:
+
+- `api`: 2 instance chạy cluster
+- `worker`: 2 instance chạy fork để xử lý hàng đợi email
+
+Cài PM2 toàn cục:
+
+```bash
+npm install --global pm2
+```
+
+Đặt `NODE_ENV=production` và hoàn thiện file `.env`, sau đó khởi chạy:
+
+```bash
+pm2 start ecosystem.config.cjs
+```
+
+Kiểm tra trạng thái và log:
+
+```bash
+pm2 status
+pm2 logs
+```
+
+Xem log riêng:
+
+```bash
+pm2 logs api
+pm2 logs worker
+```
+
+### Các lệnh PM2 thường dùng
+
+```bash
+# Khởi động lại toàn bộ tiến trình
+pm2 restart ecosystem.config.cjs
+
+# Nạp lại API theo cơ chế zero-downtime
+pm2 reload api
+
+# Khởi động lại worker
+pm2 restart worker
+
+# Dừng toàn bộ tiến trình
+pm2 stop ecosystem.config.cjs
+
+# Xóa toàn bộ tiến trình khỏi PM2
+pm2 delete ecosystem.config.cjs
+
+# Theo dõi CPU và bộ nhớ
+pm2 monit
+```
+
+Sau khi cập nhật code hoặc thay đổi biến môi trường:
+
+```bash
+git pull
+npm ci
+pm2 restart ecosystem.config.cjs --update-env
+```
+
+### Tự khởi động sau khi reboot
+
+Trên Linux/macOS:
+
+```bash
+pm2 startup
+pm2 save
+```
+
+Lệnh `pm2 startup` sẽ in ra một lệnh cần quyền quản trị. Chạy chính xác lệnh đó, sau đó chạy lại `pm2 save`.
+
+Trên Windows, `pm2 startup` không được hỗ trợ trực tiếp như Linux/macOS. Hãy cấu hình PM2 bằng Task Scheduler hoặc startup service phù hợp.
+
 ## Quy ước xác thực cho Frontend
 
 - Access token nằm trong `data.accessToken` của response.
-- Frontend gửi access token bằng header `Authorization: Bearer <accessToken>`.
-- Refresh token được Backend lưu trong cookie `HttpOnly`; không lưu refresh token vào localStorage.
+- Gửi access token bằng header `Authorization: Bearer <accessToken>`.
+- Refresh token được lưu trong cookie `HttpOnly`; không lưu refresh token vào localStorage.
 - Request cần cookie phải bật `credentials: 'include'` hoặc Axios `withCredentials: true`.
-- Khi API trả `401`, Frontend gọi refresh token một lần rồi thử lại request cũ.
+- Khi API trả `401`, gọi refresh token một lần rồi thử lại request cũ.
 
 Response thành công:
 
@@ -80,14 +205,16 @@ Response lỗi:
 }
 ```
 
-## Danh sách API hiện có
+## API hiện có
+
+Tất cả endpoint bên dưới sử dụng prefix `/api/v1`.
 
 | Method | Endpoint | Xác thực | Chức năng |
 | --- | --- | --- | --- |
 | POST | `/auth/register` | Không | Đăng ký tài khoản |
-| POST | `/auth/login` | Không | Đăng nhập email/mật khẩu |
+| POST | `/auth/login` | Không | Đăng nhập bằng email và mật khẩu |
 | GET | `/auth/google` | Không | Bắt đầu Google OAuth |
-| GET | `/auth/google-callback` | Google | Callback Google đang cấu hình |
+| GET | `/auth/google-callback` | Google | Callback Google OAuth |
 | GET | `/auth/google/callback` | Google | Callback Google dạng chuẩn |
 | POST | `/auth/refresh-token` | Refresh cookie | Làm mới access token |
 | POST | `/auth/logout` | Refresh cookie | Đăng xuất phiên hiện tại |
@@ -98,112 +225,25 @@ Response lỗi:
 | GET | `/users/me` | Bearer token | Lấy hồ sơ hiện tại |
 | PUT | `/users/me` | Bearer token | Cập nhật hồ sơ hiện tại |
 
-## Google Login
-
-Mở URL sau bằng trình duyệt:
-
-```text
-http://localhost:3000/api/v1/auth/google
-```
-
-Khi chưa có Frontend, đăng nhập thành công trả trực tiếp:
-
-```json
-{
-  "statusCode": 200,
-  "message": "Đăng nhập Google thành công.",
-  "data": {
-    "accessToken": "<JWT>"
-  }
-}
-```
-
-Refresh token đồng thời được đặt vào cookie `HttpOnly`.
-
-Khi có Frontend, tìm comment `FE TODO` trong `src/controllers/client/auth.controller.js` để thay response JSON bằng redirect tới trang xử lý đăng nhập. Các route dành cho FE được đánh dấu bằng comment `FE:` trong `src/routers/client/auth.route.js`.
-
-## Đổi và khôi phục mật khẩu
-
-Đổi mật khẩu:
-
-```http
-POST /api/v1/auth/change-password
-Authorization: Bearer <accessToken>
-Content-Type: application/json
-
-{
-  "oldPassword": "old-password",
-  "newPassword": "new-password",
-  "logoutOtherDevices": true
-}
-```
-
-Yêu cầu OTP:
-
-```http
-POST /api/v1/auth/forgot-password
-Content-Type: application/json
-
-{
-  "email": "user@example.com"
-}
-```
-
-Đặt lại mật khẩu:
-
-```http
-POST /api/v1/auth/reset-password
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "otp": "123456",
-  "newPassword": "new-password"
-}
-```
-
-Sau khi đặt lại mật khẩu, mọi session cũ của người dùng bị thu hồi.
-
-## Hồ sơ người dùng
-
-Lấy hồ sơ:
-
-```http
-GET /api/v1/users/me
-Authorization: Bearer <accessToken>
-```
-
-Cập nhật hồ sơ:
-
-```http
-PUT /api/v1/users/me
-Authorization: Bearer <accessToken>
-Content-Type: application/json
-
-{
-  "displayName": "Tên mới",
-  "avatarUrl": "https://example.com/avatar.png",
-  "defaultQuizSize": 20
-}
-```
-
-Chỉ các trường `displayName`, `avatarUrl` và `defaultQuizSize` được cập nhật.
-
-## Ví dụ gọi API từ Frontend
+## Ví dụ gọi API
 
 ```js
 const apiUrl = 'http://localhost:3000/api/v1'
 
 export async function login(email, password) {
-  const res = await fetch(`${apiUrl}/auth/login`, {
+  const response = await fetch(`${apiUrl}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify({ email, password })
   })
 
-  const result = await res.json()
-  if (!res.ok) throw new Error(result.message)
+  const result = await response.json()
+
+  if (!response.ok) {
+    throw new Error(result.message)
+  }
+
   return result.data.accessToken
 }
 ```
@@ -216,11 +256,11 @@ Import collection:
 postman/auth.collection.json
 ```
 
-Collection sử dụng:
+Các biến chính:
 
 - `baseUrl`: `http://localhost:3000/api/v1`
-- `accessToken`: tự lưu sau đăng ký hoặc đăng nhập
-- Cookie jar của Postman: tự lưu refresh token
-- `otp`: nhập OTP nhận được qua email trước khi chạy Reset Password
+- `accessToken`: tự lưu sau khi đăng ký hoặc đăng nhập
+- `otp`: OTP nhận qua email để đặt lại mật khẩu
+- Cookie jar của Postman tự lưu refresh token
 
-Google Login là OAuth redirect nên request Postman được cấu hình không tự theo redirect; hãy mở giá trị header `Location` trong trình duyệt để đăng nhập.
+Google Login sử dụng OAuth redirect. Nếu Postman không tự theo redirect, mở URL trong header `Location` bằng trình duyệt.
