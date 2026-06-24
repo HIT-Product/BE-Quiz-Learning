@@ -3,23 +3,20 @@ import cors from 'cors'
 import http from 'http'
 import express from 'express'
 import mongoose from 'mongoose'
-
 import { fileURLToPath } from 'url'
+import cookieParser from 'cookie-parser'
+import { StatusCodes } from 'http-status-codes'
+
+import './configs/google.config.js'
 import router from './routers/index.js'
 import { logger, response } from './utils/index.js'
-import { envConfig, connectDB } from './configs/index.js'
+import { envConfig, connectDB, passport } from './configs/index.js'
 import { errorMiddleware, morganMiddleware } from './middlewares/index.js'
-import { StatusCodes } from 'http-status-codes'
 
 const app = express()
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-
-app.use(cors())
-
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
 
 app.set('views', `${__dirname}/views`)
 app.set('view engine', 'pug')
@@ -28,9 +25,15 @@ app.use(express.static(path.join(__dirname, '..', 'public')))
 
 app.use(
   cors({
-    origin: '*'
+    origin: envConfig.server.clientUrl || 'http://localhost:3000',
+    credentials: true
   })
 )
+
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
+app.use(cookieParser())
+app.use(passport.initialize())
 
 app.set('trust proxy', true)
 
