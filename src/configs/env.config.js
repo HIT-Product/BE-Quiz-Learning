@@ -6,7 +6,7 @@ const env = {
     nodeEnv: process.env.NODE_ENV || 'development',
     host: process.env.HOST || 'localhost',
     port: process.env.PORT || 3000,
-    clientUrl: process.env.CLIENT_URL || 'http://localhost:3000'
+    clientUrl: process.env.CLIENT_URL || 'http://localhost:5173'
   },
   bcrypt: {
     saltRounds: parseInt(process.env.SALT_ROUNDS, 10) || 10
@@ -28,6 +28,11 @@ const env = {
     port: parseInt(process.env.REDIS_PORT, 10) || 6379,
     username: process.env.REDIS_USERNAME,
     password: process.env.REDIS_PASSWORD
+  },
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackUrl: process.env.GOOGLE_CALLBACK_URL
   },
   cloudinary: {
     cloudName: process.env.CLOUD_NAME,

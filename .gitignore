@@ -24,6 +24,7 @@ dist
 
 # Log
 logs
+.tmp-*.log
 
 # Static
 uploads/*
