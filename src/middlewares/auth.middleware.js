@@ -5,7 +5,6 @@ import { sessionModel } from '../models/index.js'
 import { ApiError, catchAsync, jwtUtils } from '../utils/index.js'
 
 const unauthorizedSession = () => new ApiError(StatusCodes.UNAUTHORIZED, 'Phiên đăng nhập đã hết hạn hoặc bị thu hồi.')
-// === Chức năng: Xác thực access token và phiên đăng nhập ===
 const authMiddleware = catchAsync(async (req, res, next) => {
   const token = jwtUtils.extractToken(req)
   if (!token) {

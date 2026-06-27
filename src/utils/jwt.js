@@ -27,7 +27,6 @@ const verifyRefreshToken = (token) => {
   return jwt.verify(token, envConfig.jwt.secretRefresh)
 }
 
-// Không verify, chỉ đọc payload để lấy exp khi lưu Session
 const decodeToken = (token) => {
   return jwt.decode(token)
 }
