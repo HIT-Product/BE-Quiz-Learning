@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { envConfig } from '../../configs/index.js'
 import { authService } from '../../services/client/index.js'
 import { catchAsync, response, ApiError, refreshCookieOptions } from '../../utils/index.js'
-// === Chức năng: Đăng ký tài khoản ===
+// [POST] /auth/register
 const register = catchAsync(async (req, res) => {
   const { email, password, displayName } = req.body
 
@@ -12,7 +12,7 @@ const register = catchAsync(async (req, res) => {
   res.cookie('refreshToken', refreshToken, refreshCookieOptions)
   return res.status(StatusCodes.CREATED).json(response(StatusCodes.CREATED, 'Đăng ký thành công.', { accessToken }))
 })
-// === Chức năng: Đăng nhập bằng email và mật khẩu ===
+// [POST] /auth/login
 const login = catchAsync(async (req, res) => {
   const { email, password } = req.body
 
@@ -21,7 +21,7 @@ const login = catchAsync(async (req, res) => {
   res.cookie('refreshToken', refreshToken, refreshCookieOptions)
   return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Đăng nhập thành công.', { accessToken }))
 })
-// === Chức năng: Làm mới access token ===
+// [POST] /auth/refresh-token
 const refreshToken = catchAsync(async (req, res) => {
   const token = req.cookies.refreshToken
   if (!token) {
@@ -33,7 +33,7 @@ const refreshToken = catchAsync(async (req, res) => {
   res.cookie('refreshToken', newRefreshToken, refreshCookieOptions)
   return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Cấp token mới thành công.', { accessToken }))
 })
-// === Chức năng: Đăng xuất phiên hiện tại ===
+// [POST] /auth/logout
 const logout = catchAsync(async (req, res) => {
   const token = req.cookies.refreshToken
   if (token) {
@@ -43,14 +43,14 @@ const logout = catchAsync(async (req, res) => {
   res.clearCookie('refreshToken', refreshCookieOptions)
   return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Đăng xuất thành công.'))
 })
-// === Chức năng: Đăng xuất khỏi tất cả thiết bị ===
+// [POST] /auth/logout-all
 const logoutAll = catchAsync(async (req, res) => {
   await authService.logoutAll(req.user._id)
 
   res.clearCookie('refreshToken', refreshCookieOptions)
   return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Đăng xuất tất cả thiết bị thành công.'))
 })
-// === Chức năng: Đổi mật khẩu ===
+// [POST] /auth/change-password
 const changePassword = catchAsync(async (req, res) => {
   const { oldPassword, newPassword, logoutOtherDevices = true } = req.body
 
@@ -68,14 +68,14 @@ const changePassword = catchAsync(async (req, res) => {
 
   return res.status(StatusCodes.OK).json(response(StatusCodes.OK, message, result))
 })
-// === Chức năng: Gửi OTP khôi phục mật khẩu ===
+// [POST] /auth/forgot-password
 const forgotPassword = catchAsync(async (req, res) => {
   await authService.forgotPassword(req.body)
   return res
     .status(StatusCodes.OK)
     .json(response(StatusCodes.OK, 'Neu email ton tai, ma OTP da duoc gui. Vui long kiem tra hop thu.'))
 })
-// === Chức năng: Đặt lại mật khẩu bằng OTP ===
+// [POST] /auth/reset-password
 const resetPassword = catchAsync(async (req, res) => {
   await authService.resetPassword(req.body)
   return res
@@ -83,6 +83,7 @@ const resetPassword = catchAsync(async (req, res) => {
     .json(response(StatusCodes.OK, 'Dat lai mat khau thanh cong. Vui long dang nhap lai.'))
 })
 
+// [GET] /auth/google-callback
 const googleCallback = catchAsync(async (req, res) => {
   try {
     const { accessToken, refreshToken } = await authService.googleLogin(req.user)
