@@ -30,7 +30,8 @@ const deckSchema = new mongoose.Schema(
     cardCount: {
       type: Number,
       default: 0
-    }
+    },
+    folderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Folder', default: null }
   },
   {
     timestamps: true
