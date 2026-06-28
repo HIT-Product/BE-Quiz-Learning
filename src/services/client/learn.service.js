@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { deckModel, flashcardModel, cardProgressModel } from '../../models/index.js'
 import { ApiError } from '../../utils/index.js'
 import { shuffle, normalize } from '../../utils/quiz.js'
-import { buildMultipleChoice, buildTrueFalse, buildWritten, buildFlashcard } from './question.builder.js'
+import { buildMultipleChoice, buildTrueFalse, buildWritten, buildFlashcard } from './question.service.js'
 
 // Kiem tra quyen truy cap deck
 const getAccessibleDeck = async (deckId, userId) => {
