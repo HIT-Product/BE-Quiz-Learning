@@ -1,0 +1,2493 @@
+{
+  "info": {
+    "name": "HITProduct API",
+    "_postman_id": "hit-product-api-v1",
+    "description": "Bo test Auth va User. Register/Login tu luu accessToken; refreshToken nam trong cookie HttpOnly. Forgot Password gui OTP; dien bien otp truoc khi Reset Password. Google Login tra redirect de mo trong trinh duyet.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "otp",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "folderId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "deckId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "copiedDeckId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cardId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "quizAttemptId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "quizQuestionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "quizMultipleChoiceQuestionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "quizMultipleChoiceAnswer",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "quizTrueFalseQuestionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "quizTrueFalseAnswer",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "quizWrittenQuestionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "quizWrittenAnswer",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "quizSubmitBody",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "quizQuestionPreview",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "learnAnswerBody",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "learnQuestionPreview",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "learnQuestionType",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "learnFlashcardId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "learnSelectedAnswer",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "learnStatement",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "learnMultipleChoiceAnswerBody",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "learnTrueFalseAnswerBody",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "learnWrittenAnswerBody",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "studyCardId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "studyReviewBody",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "studyRememberedBody",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "studyNotRememberedBody",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "studySessionPreview",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Cac endpoint xac thuc nguoi dung: dang ky, dang nhap, lam moi token, dang xuat. refreshToken duoc quan ly qua httpOnly cookie.",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"displayName\": \"Nguyen Van A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Dang ky tai khoan moi. Dang ky xong la dang nhap luon (issue tokens + tao session).\n\n**Validation:**\n- `email`: bat buoc, phai la email hop le\n- `password`: bat buoc, toi thieu 6 ky tu\n- `displayName`: bat buoc, khong duoc de trong\n\n**Response 201:**\n```json\n{\n  \"statusCode\": 201,\n  \"message\": \"Dang ky thanh cong.\",\n  \"data\": { \"accessToken\": \"<jwt>\" }\n}\n```\nHeader tra ve co `Set-Cookie: refreshToken=...; HttpOnly; Path=/api/v1/auth`.\n\n**Errors:**\n- `400`: Validation that bai\n- `409`: Email da ton tai"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "  console.log('accessToken da duoc luu.');",
+                  "}",
+                  "",
+                  "pm.test(\"Body chi co accessToken (khong lo refreshToken)\", () => {",
+                  "  pm.expect(json.data).to.have.property('accessToken');",
+                  "  pm.expect(json.data).to.not.have.property('refreshToken');",
+                  "});",
+                  "",
+                  "pm.test(\"Co cookie refreshToken (HttpOnly)\", () => {",
+                  "  pm.expect(pm.cookies.has('refreshToken')).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Dang nhap. Body tra ve accessToken, refreshToken nam trong httpOnly cookie.\n\nScript tu dong luu `accessToken` vao bien collection.\n\n**Response 200:**\n```json\n{\n  \"statusCode\": 200,\n  \"message\": \"Dang nhap thanh cong.\",\n  \"data\": { \"accessToken\": \"<jwt>\" }\n}\n```\n\n**Errors:**\n- `400`: Validation that bai\n- `401`: Email hoac mat khau khong dung"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "  console.log('accessToken da duoc luu.');",
+                  "}",
+                  "",
+                  "pm.test(\"Co accessToken, khong co refreshToken trong body\", () => {",
+                  "  pm.expect(json.data).to.have.property('accessToken');",
+                  "  pm.expect(json.data).to.not.have.property('refreshToken');",
+                  "});",
+                  "",
+                  "pm.test(\"Co cookie refreshToken (HttpOnly)\", () => {",
+                  "  pm.expect(pm.cookies.has('refreshToken')).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/auth/refresh-token",
+            "description": "Lay accessToken moi khi accessToken het han. KHONG can body: server doc refreshToken tu cookie (Postman tu gui cookie).\n\nAp dung token rotation: refreshToken cu bi vo hieu, cookie duoc cap moi qua Set-Cookie.\n\n**Response 200:**\n```json\n{\n  \"statusCode\": 200,\n  \"message\": \"Cap token moi thanh cong.\",\n  \"data\": { \"accessToken\": \"<jwt_moi>\" }\n}\n```\n\n**Errors:**\n- `401`: Thieu cookie / token khong hop le / het han / session khong ton tai"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "  console.log('accessToken moi da duoc cap nhat.');",
+                  "}",
+                  "",
+                  "pm.test(\"Co accessToken moi\", () => {",
+                  "  pm.expect(json.data).to.have.property('accessToken');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/auth/logout",
+            "description": "Dang xuat khoi thiet bi hien tai. KHONG can body: server doc refreshToken tu cookie, xoa session tuong ung va clear cookie.\n\n**Response 200:**\n```json\n{\n  \"statusCode\": 200,\n  \"message\": \"Dang xuat thanh cong.\"\n}\n```"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('accessToken', '');",
+                  "  console.log('accessToken da duoc xoa khoi bien.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout All Devices",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/logout-all",
+            "description": "Dang xuat khoi TAT CA thiet bi (xoa toan bo session cua nguoi dung) va clear cookie.\n\n**Yeu cau xac thuc:** `Authorization: Bearer {{accessToken}}`\n\n**Response 200:**\n```json\n{\n  \"statusCode\": 200,\n  \"message\": \"Dang xuat tat ca thiet bi thanh cong.\"\n}\n```\n\n**Errors:**\n- `401`: Thieu hoac accessToken khong hop le / het han"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('accessToken', '');",
+                  "  console.log('Tat ca tokens da duoc xoa.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oldPassword\": \"password123\",\n  \"newPassword\": \"matkhaumoi123\",\n  \"logoutOtherDevices\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/auth/change-password",
+            "description": "??i m?t kh?u v? t?y ch?n ??ng xu?t c?c thi?t b? kh?c. Session hi?n t?i ???c gi? l?i. Y?u c?u access token c? sessionId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test(\"C? c? loggedOutOtherDevices\", () => {",
+                  "  pm.expect(json.data).to.have.property(\"loggedOutOtherDevices\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/forgot-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Gui OTP dat lai mat khau. Response khong lam lo email co ton tai."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/reset-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"otp\": \"{{otp}}\",\n  \"newPassword\": \"newPassword123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Dat lai mat khau bang OTP. Dien bien collection {{otp}} tu email."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Google Login - Start OAuth",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/auth/google",
+            "description": "Khong tu theo redirect. Mo header Location trong trinh duyet; callback tra JSON accessToken va dat refreshToken cookie."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Redirect 302 sang Google\", () => pm.response.to.have.status(302));",
+                  "pm.test(\"Co Google Location\", () => {",
+                  "  pm.expect(pm.response.headers.get(\"Location\")).to.include(\"accounts.google.com\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "API ho so; can Bearer {{accessToken}}.",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/users/me",
+            "description": "Lay ho so nguoi dung hien tai; khong tra passwordHash."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Khong lo passwordHash\", () => {",
+                  "  pm.expect(pm.response.json().data).to.not.have.property(\"passwordHash\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/users/me",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Updated User\",\n  \"avatarUrl\": \"https://example.com/avatar.png\",\n  \"defaultQuizSize\": 20\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Cap nhat displayName, avatarUrl va defaultQuizSize."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Profile duoc cap nhat\", () => {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.expect(data.displayName).to.eql(\"Updated User\");",
+                  "  pm.expect(data.defaultQuizSize).to.eql(20);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Folders",
+      "description": "API thu muc. Folder chi CRUD; danh sach deck trong folder lay qua GET /decks?folderId={{folderId}}. Xoa folder se go folderId tren deck, KHONG xoa deck.",
+      "item": [
+        {
+          "name": "List Folders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/folders",
+            "description": "Liet ke folder cua user hien tai, sap xep moi nhat truoc."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Folder",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/folders",
+            "description": "Tao folder moi. Script tu dong luu data._id vao {{folderId}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tu vung TOEIC\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data._id) {",
+                  "  pm.collectionVariables.set('folderId', json.data._id);",
+                  "  console.log('folderId da duoc luu.');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Folder By Id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/folders/{{folderId}}",
+            "description": "Lay chi tiet folder. API nay chi tra thong tin folder, khong populate deck; muon lay deck trong folder dung request List Decks In Folder."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const folderId = pm.collectionVariables.get('folderId');",
+                  "if (!folderId) { throw new Error('Thieu folderId. Hay chay Create Folder truoc.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Folder",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/folders/{{folderId}}",
+            "description": "Doi ten folder. Body chi co name.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tu vung TOEIC (sua)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const folderId = pm.collectionVariables.get('folderId');",
+                  "if (!folderId) { throw new Error('Thieu folderId. Hay chay Create Folder truoc.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Decks In Folder",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks?folderId={{folderId}}",
+            "description": "Lay deck nam trong folder hien tai. Day la API thay the cho viec folder populate deckIds."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const folderId = pm.collectionVariables.get('folderId');",
+                  "if (!folderId) { throw new Error('Thieu folderId. Hay chay Create Folder truoc.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Folder",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/folders/{{folderId}}",
+            "description": "Xoa folder. Cac deck trong folder khong bi xoa; server se set folderId=null cho cac deck do."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const folderId = pm.collectionVariables.get('folderId');",
+                  "if (!folderId) { throw new Error('Thieu folderId. Hay chay Create Folder truoc.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Decks",
+      "description": "API deck. Deck co truong folderId tuy chon; tao/update deck co the gan vao folder. GET /decks?folderId={{folderId}} de loc theo folder.",
+      "item": [
+        {
+          "name": "List My Decks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks",
+            "description": "Liet ke tat ca deck cua user hien tai."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List My Decks In Folder",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks?folderId={{folderId}}",
+            "description": "Loc deck cua user theo folderId. Can chay Create Folder truoc de co {{folderId}}."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const folderId = pm.collectionVariables.get('folderId');",
+                  "if (!folderId) { throw new Error('Thieu folderId. Hay chay Create Folder truoc.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Public Decks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/public",
+            "description": "Liet ke deck public cua moi nguoi."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Deck",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks",
+            "description": "Tao deck moi khong nam trong folder. Script tu dong luu data._id vao {{deckId}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Tu vung Unit 1\",\n  \"description\": \"Bo the demo\",\n  \"visibility\": \"private\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data._id) {",
+                  "  pm.collectionVariables.set('deckId', json.data._id);",
+                  "  console.log('deckId da duoc luu.');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Deck In Folder",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks",
+            "description": "Tao deck va gan luon vao folder hien tai. Can {{folderId}} hop le; script luu deck moi vao {{deckId}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Tu vung trong folder\",\n  \"description\": \"Bo the duoc tao truc tiep trong folder\",\n  \"visibility\": \"private\",\n  \"folderId\": \"{{folderId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const folderId = pm.collectionVariables.get('folderId');",
+                  "if (!folderId) { throw new Error('Thieu folderId. Hay chay Create Folder truoc.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data._id) {",
+                  "  pm.collectionVariables.set('deckId', json.data._id);",
+                  "  console.log('deckId da duoc luu.');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Deck By Id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}",
+            "description": "Chi tiet deck cua minh hoac deck public."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const deckId = pm.collectionVariables.get('deckId');",
+                  "if (!deckId) { throw new Error('Thieu deckId. Hay chay Create Deck truoc.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Deck",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}",
+            "description": "Cap nhat title / description / visibility. Body can it nhat mot truong.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Tu vung Unit 1 (sua)\",\n  \"description\": \"Mo ta da cap nhat\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const deckId = pm.collectionVariables.get('deckId');",
+                  "if (!deckId) { throw new Error('Thieu deckId. Hay chay Create Deck truoc.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Move Deck To Folder",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}",
+            "description": "Gan/chuyen deck vao folder. API moi dung PUT /decks/{{deckId}} voi body { folderId }, khong con POST /folders/:id/decks.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"folderId\": \"{{folderId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const deckId = pm.collectionVariables.get('deckId');",
+                  "if (!deckId) { throw new Error('Thieu deckId. Hay chay Create Deck truoc.'); }",
+                  "const folderId = pm.collectionVariables.get('folderId');",
+                  "if (!folderId) { throw new Error('Thieu folderId. Hay chay Create Folder truoc.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Remove Deck From Folder",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}",
+            "description": "Bo deck khoi folder bang cach set folderId=null. API moi dung PUT /decks/{{deckId}}, khong con DELETE /folders/:folderId/decks/:deckId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"folderId\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const deckId = pm.collectionVariables.get('deckId');",
+                  "if (!deckId) { throw new Error('Thieu deckId. Hay chay Create Deck truoc.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Copy Deck",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/copy",
+            "description": "Copy mot deck public ve lam cua minh. Deck nguon phai public. Script luu data._id vao {{copiedDeckId}}."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const deckId = pm.collectionVariables.get('deckId');",
+                  "if (!deckId) { throw new Error('Thieu deckId. Hay chay Create Deck truoc.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data._id) {",
+                  "  pm.collectionVariables.set('copiedDeckId', json.data._id);",
+                  "  console.log('copiedDeckId da duoc luu.');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Deck",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}",
+            "description": "Xoa deck cua minh, xoa luon flashcard ben trong. Quan he folder nam tren deck.folderId nen khong can go rieng."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const deckId = pm.collectionVariables.get('deckId');",
+                  "if (!deckId) { throw new Error('Thieu deckId. Hay chay Create Deck truoc.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Flashcards",
+      "description": "API the hoc (flashcard), long trong deck: /decks/{{deckId}}/cards. Create Card luu {{cardId}}.",
+      "item": [
+        {
+          "name": "List Cards",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/cards",
+            "description": "Liet ke the trong deck theo sortOrder."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Card",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/cards",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"front\": \"hello\",\n  \"back\": \"xin chao\",\n  \"distractors\": [\"tam biet\", \"cam on\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Them the moi. distractors la dap an nhieu thu cong (tuy chon). Script luu data._id vao {{cardId}}."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data._id) {",
+                  "  pm.collectionVariables.set('cardId', json.data._id);",
+                  "  console.log('cardId da duoc luu.');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reorder Cards",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/cards/reorder",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderedIds\": [\"{{cardId}}\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Sap xep lai thu tu the. Dat route truoc /:cardId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Card",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/cards/{{cardId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"front\": \"hello (sua)\",\n  \"back\": \"xin chao\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Sua front / back / distractors cua the."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Card",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/cards/{{cardId}}",
+            "description": "Xoa the; deck.cardCount duoc dong bo lai."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Study - Lat The",
+      "description": "Che do lat the. Flow: Start Study Session -> Review Card - Remembered/Not Remembered. API dung CardProgress de luu remembered/learning.",
+      "item": [
+        {
+          "name": "Start Study Session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/study?filter=all",
+            "description": "BUOC 1: Lay danh sach the de lat. Script tu luu the dau tien vao {{studyCardId}} va tao body review mau."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const deckId = pm.collectionVariables.get('deckId');",
+                  "if (!deckId) { throw new Error('Thieu deckId. Hay chay Create Deck truoc.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const json = pm.response.json();",
+                  "const data = json.data || {};",
+                  "const cards = Array.isArray(data.cards) ? data.cards : [];",
+                  "pm.collectionVariables.set('studySessionPreview', JSON.stringify(data, null, 2));",
+                  "if (cards[0]?._id) {",
+                  "  pm.collectionVariables.set('studyCardId', cards[0]._id);",
+                  "  pm.collectionVariables.set('cardId', cards[0]._id);",
+                  "  pm.collectionVariables.set('studyRememberedBody', JSON.stringify({ remembered: true }, null, 2));",
+                  "  pm.collectionVariables.set('studyNotRememberedBody', JSON.stringify({ remembered: false }, null, 2));",
+                  "  pm.collectionVariables.set('studyReviewBody', JSON.stringify({ remembered: true }, null, 2));",
+                  "  console.log('studyCardId da duoc luu:', cards[0]._id);",
+                  "}",
+                  "pm.test(\"Co summary va cards\", () => {",
+                  "  pm.expect(data).to.have.property('summary');",
+                  "  pm.expect(data).to.have.property('cards');",
+                  "});",
+                  "pm.test(\"Co it nhat mot the de review\", () => {",
+                  "  pm.expect(cards).to.be.an(\"array\").that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Review Card - Remembered",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/study/cards/{{studyCardId}}/review",
+            "description": "BUOC 2: Bam Da nho. Body { remembered: true }, server cap nhat CardProgress status=remembered.",
+            "body": {
+              "mode": "raw",
+              "raw": "{{studyRememberedBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const deckId = pm.collectionVariables.get('deckId');",
+                  "if (!deckId) { throw new Error('Thieu deckId. Hay chay Create Deck truoc.'); }",
+                  "const cardId = pm.collectionVariables.get('studyCardId') || pm.collectionVariables.get('cardId');",
+                  "if (!cardId) { throw new Error('Thieu studyCardId/cardId. Hay chay Start Study Session hoac Create Card truoc.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const data = pm.response.json().data || {};",
+                  "pm.test(\"Status la remembered\", () => {",
+                  "  pm.expect(data.status).to.eql('remembered');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Review Card - Not Remembered",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/study/cards/{{studyCardId}}/review",
+            "description": "Bam Chua nho. Body { remembered: false }, server cap nhat CardProgress status=learning.",
+            "body": {
+              "mode": "raw",
+              "raw": "{{studyNotRememberedBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const deckId = pm.collectionVariables.get('deckId');",
+                  "if (!deckId) { throw new Error('Thieu deckId. Hay chay Create Deck truoc.'); }",
+                  "const cardId = pm.collectionVariables.get('studyCardId') || pm.collectionVariables.get('cardId');",
+                  "if (!cardId) { throw new Error('Thieu studyCardId/cardId. Hay chay Start Study Session hoac Create Card truoc.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const data = pm.response.json().data || {};",
+                  "pm.test(\"Status la learning\", () => {",
+                  "  pm.expect(data.status).to.eql('learning');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Review Card - Auto Body",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/study/cards/{{studyCardId}}/review",
+            "description": "Review bang body mau trong {{studyReviewBody}}. Mac dinh la { remembered: true }; co the sua bien nay de test nhanh.",
+            "body": {
+              "mode": "raw",
+              "raw": "{{studyReviewBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const deckId = pm.collectionVariables.get('deckId');",
+                  "if (!deckId) { throw new Error('Thieu deckId. Hay chay Create Deck truoc.'); }",
+                  "const cardId = pm.collectionVariables.get('studyCardId') || pm.collectionVariables.get('cardId');",
+                  "if (!cardId) { throw new Error('Thieu studyCardId/cardId. Hay chay Start Study Session hoac Create Card truoc.'); }",
+                  "const body = pm.collectionVariables.get('studyReviewBody');",
+                  "if (!body) { throw new Error('Thieu studyReviewBody. Hay chay Start Study Session truoc.'); }",
+                  "try { JSON.parse(body); } catch (error) { throw new Error(`studyReviewBody khong phai JSON hop le: ${error.message}`); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const data = pm.response.json().data || {};",
+                  "pm.test(\"Co progress\", () => {",
+                  "  pm.expect(data).to.have.property('status');",
+                  "  pm.expect(data).to.have.property('reviewCount');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Start Study Session - New Only",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/study?filter=new",
+            "description": "Lay rieng cac the chua hoc (status=new)."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const deckId = pm.collectionVariables.get('deckId');",
+                  "if (!deckId) { throw new Error('Thieu deckId. Hay chay Create Deck truoc.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Start Study Session - Learning",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/study?filter=learning",
+            "description": "Lay cac the new + learning de tiep tuc hoc."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const deckId = pm.collectionVariables.get('deckId');",
+                  "if (!deckId) { throw new Error('Thieu deckId. Hay chay Create Deck truoc.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Quiz",
+      "description": "Test quiz de hon: chay Generate Quiz truoc, request nay tu luu quizSubmitBody; sau do chay Submit Quiz - Auto.",
+      "item": [
+        {
+          "name": "Generate Quiz",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/quiz",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"types\": [\n    \"multiple_choice\",\n    \"true_false\",\n    \"written\"\n  ],\n  \"limit\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "BUOC 1: Sinh quiz va tu tao body nop bai.\n\nChay request nay truoc. Script se tu luu:\n- `quizAttemptId`\n- `quizSubmitBody`: body day du de gui sang Submit Quiz - Auto\n- cac bien rieng cho multiple_choice / true_false / written\n\nSau do chay request `Submit Quiz - Auto`. Neu bi 404, kiem tra `deckId` da co gia tri chua va deck co ton tai khong."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const deckId = pm.collectionVariables.get('deckId');",
+                  "if (!deckId) { throw new Error('Thieu deckId. Hay chay Create Deck truoc de Postman luu {{deckId}}.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const json = pm.response.json();",
+                  "const data = json.data || {};",
+                  "const questions = Array.isArray(data.questions) ? data.questions : [];",
+                  "",
+                  "if (data.attemptId) {",
+                  "  pm.collectionVariables.set('quizAttemptId', data.attemptId);",
+                  "}",
+                  "",
+                  "if (questions[0]?.questionId) {",
+                  "  pm.collectionVariables.set('quizQuestionId', questions[0].questionId);",
+                  "}",
+                  "",
+                  "const multipleChoice = questions.find((q) => q.type === 'multiple_choice');",
+                  "const trueFalse = questions.find((q) => q.type === 'true_false');",
+                  "const written = questions.find((q) => q.type === 'written');",
+                  "",
+                  "if (multipleChoice?.questionId) {",
+                  "  pm.collectionVariables.set('quizMultipleChoiceQuestionId', multipleChoice.questionId);",
+                  "  pm.collectionVariables.set('quizMultipleChoiceAnswer', (multipleChoice.options && multipleChoice.options[0]) || '');",
+                  "}",
+                  "",
+                  "if (trueFalse?.questionId) {",
+                  "  pm.collectionVariables.set('quizTrueFalseQuestionId', trueFalse.questionId);",
+                  "  pm.collectionVariables.set('quizTrueFalseAnswer', 'true');",
+                  "}",
+                  "",
+                  "if (written?.questionId) {",
+                  "  pm.collectionVariables.set('quizWrittenQuestionId', written.questionId);",
+                  "  pm.collectionVariables.set('quizWrittenAnswer', 'xin chao');",
+                  "}",
+                  "",
+                  "const autoAnswers = questions.map((q) => {",
+                  "  let selectedAnswer = \"\";",
+                  "  if (q.type === 'multiple_choice') selectedAnswer = (q.options && q.options[0]) || '';",
+                  "  if (q.type === 'true_false') selectedAnswer = 'true';",
+                  "  if (q.type === 'written') selectedAnswer = 'xin chao';",
+                  "  return { questionId: q.questionId, selectedAnswer };",
+                  "}).filter((answer) => answer.questionId);",
+                  "",
+                  "const submitBody = {",
+                  "  attemptId: data.attemptId,",
+                  "  answers: autoAnswers",
+                  "};",
+                  "pm.collectionVariables.set('quizSubmitBody', JSON.stringify(submitBody, null, 2));",
+                  "pm.collectionVariables.set('quizQuestionPreview', JSON.stringify(questions, null, 2));",
+                  "",
+                  "console.log(\"quizSubmitBody da duoc tao. Chay request Submit Quiz - Auto.\");",
+                  "console.log(JSON.stringify(submitBody, null, 2));",
+                  "",
+                  "pm.test(\"Co attemptId va questions\", () => {",
+                  "  pm.expect(data).to.have.property('attemptId');",
+                  "  pm.expect(questions).to.be.an(\"array\").that.is.not.empty;",
+                  "});",
+                  "",
+                  "pm.test(\"Da tao quizSubmitBody\", () => {",
+                  "  pm.expect(submitBody.attemptId).to.exist;",
+                  "  pm.expect(submitBody.answers).to.be.an(\"array\").that.is.not.empty;",
+                  "});",
+                  "",
+                  "pm.test(\"Khong lo correctAnswer trong questions\", () => {",
+                  "  for (const q of questions) {",
+                  "    pm.expect(q).to.not.have.property('correctAnswer');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit Quiz - Auto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/quiz/submit",
+            "body": {
+              "mode": "raw",
+              "raw": "{{quizSubmitBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "BUOC 2: Nop bai tu dong. Chay Generate Quiz truoc de tao {{quizSubmitBody}}, sau do bam Send request nay. Muon test lai thi chay Generate Quiz lai vi attempt chi nop duoc mot lan."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.collectionVariables.get('quizSubmitBody');",
+                  "if (!body) { throw new Error('Thieu quizSubmitBody. Hay chay Generate Quiz truoc.'); }",
+                  "try { JSON.parse(body); } catch (error) { throw new Error(`quizSubmitBody khong phai JSON hop le: ${error.message}`); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const json = pm.response.json();",
+                  "const data = json.data || {};",
+                  "pm.test(\"Co ket qua cham diem\", () => {",
+                  "  pm.expect(data).to.have.property('score');",
+                  "  pm.expect(data).to.have.property('correctCount');",
+                  "  pm.expect(data).to.have.property('totalQuestions');",
+                  "  pm.expect(data).to.have.property('submittedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit Quiz - All Types",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/quiz/submit",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"attemptId\": \"{{quizAttemptId}}\",\n  \"answers\": [\n    {\n      \"questionId\": \"{{quizMultipleChoiceQuestionId}}\",\n      \"selectedAnswer\": \"{{quizMultipleChoiceAnswer}}\"\n    },\n    {\n      \"questionId\": \"{{quizTrueFalseQuestionId}}\",\n      \"selectedAnswer\": \"{{quizTrueFalseAnswer}}\"\n    },\n    {\n      \"questionId\": \"{{quizWrittenQuestionId}}\",\n      \"selectedAnswer\": \"{{quizWrittenAnswer}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Nop bai voi du 3 dang cau hoi: chon dap an multiple_choice, dung/sai true_false, va tra loi text written. Chay Generate Quiz truoc de luu cac bien questionId/answer."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const json = pm.response.json();",
+                  "const data = json.data || {};",
+                  "pm.test(\"Co ket qua cham diem\", () => {",
+                  "  pm.expect(data).to.have.property('score');",
+                  "  pm.expect(data).to.have.property('correctCount');",
+                  "  pm.expect(data).to.have.property('totalQuestions');",
+                  "  pm.expect(data).to.have.property('submittedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit Quiz - Multiple Choice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/quiz/submit",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"attemptId\": \"{{quizAttemptId}}\",\n  \"answers\": [\n    {\n      \"questionId\": \"{{quizMultipleChoiceQuestionId}}\",\n      \"selectedAnswer\": \"{{quizMultipleChoiceAnswer}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Test rieng dang chon dap an multiple_choice. `selectedAnswer` phai la mot gia tri trong `options` cua cau hoi. Chay Generate Quiz lai truoc request nay neu attempt da nop."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const json = pm.response.json();",
+                  "const data = json.data || {};",
+                  "pm.test(\"Co ket qua cham diem\", () => {",
+                  "  pm.expect(data).to.have.property('score');",
+                  "  pm.expect(data).to.have.property('correctCount');",
+                  "  pm.expect(data).to.have.property('totalQuestions');",
+                  "  pm.expect(data).to.have.property('submittedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit Quiz - True False",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/quiz/submit",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"attemptId\": \"{{quizAttemptId}}\",\n  \"answers\": [\n    {\n      \"questionId\": \"{{quizTrueFalseQuestionId}}\",\n      \"selectedAnswer\": \"{{quizTrueFalseAnswer}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Test rieng dang dung/sai true_false. `selectedAnswer` gui string `true` hoac `false`. Chay Generate Quiz lai truoc request nay neu attempt da nop."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const json = pm.response.json();",
+                  "const data = json.data || {};",
+                  "pm.test(\"Co ket qua cham diem\", () => {",
+                  "  pm.expect(data).to.have.property('score');",
+                  "  pm.expect(data).to.have.property('correctCount');",
+                  "  pm.expect(data).to.have.property('totalQuestions');",
+                  "  pm.expect(data).to.have.property('submittedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit Quiz - Written",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/quiz/submit",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"attemptId\": \"{{quizAttemptId}}\",\n  \"answers\": [\n    {\n      \"questionId\": \"{{quizWrittenQuestionId}}\",\n      \"selectedAnswer\": \"{{quizWrittenAnswer}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Test rieng dang tra loi text written. `selectedAnswer` la chuoi nguoi dung nhap. Chay Generate Quiz lai truoc request nay neu attempt da nop."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const json = pm.response.json();",
+                  "const data = json.data || {};",
+                  "pm.test(\"Co ket qua cham diem\", () => {",
+                  "  pm.expect(data).to.have.property('score');",
+                  "  pm.expect(data).to.have.property('correctCount');",
+                  "  pm.expect(data).to.have.property('totalQuestions');",
+                  "  pm.expect(data).to.have.property('submittedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Learn",
+      "description": "API che do hoc Learn. Flow de test: Build Learn Round -> Submit Learn Answer - Auto. Cac request rieng dung de test multiple_choice / true_false / written.",
+      "item": [
+        {
+          "name": "Build Learn Round",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/learn?limit=10&onlyUnlearned=false&types=multiple_choice,true_false,written",
+            "description": "BUOC 1: Sinh mot vong Learn va tu tao body tra loi mau. Chay request nay truoc, sau do chay Submit Learn Answer - Auto."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const deckId = pm.collectionVariables.get('deckId');",
+                  "if (!deckId) { throw new Error('Thieu deckId. Hay chay Create Deck truoc de Postman luu {{deckId}}.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const json = pm.response.json();",
+                  "const data = json.data || {};",
+                  "const questions = Array.isArray(data.questions) ? data.questions : [];",
+                  "const answerable = questions.filter((q) => ['multiple_choice', 'true_false', 'written'].includes(q.type));",
+                  "",
+                  "function answerBodyFor(q) {",
+                  "  if (!q) return null;",
+                  "  let selectedAnswer = \"\";",
+                  "  if (q.type === 'multiple_choice') selectedAnswer = (q.options && q.options[0]) || '';",
+                  "  if (q.type === 'true_false') selectedAnswer = 'true';",
+                  "  if (q.type === 'written') selectedAnswer = 'xin chao';",
+                  "  const body = {",
+                  "    flashcardId: q.flashcardId,",
+                  "    type: q.type,",
+                  "    selectedAnswer",
+                  "  };",
+                  "  if (q.type === 'true_false') body.statement = q.statement || '';",
+                  "  return body;",
+                  "}",
+                  "",
+                  "const firstAnswerable = answerable[0];",
+                  "const multipleChoice = questions.find((q) => q.type === 'multiple_choice');",
+                  "const trueFalse = questions.find((q) => q.type === 'true_false');",
+                  "const written = questions.find((q) => q.type === 'written');",
+                  "",
+                  "const autoBody = answerBodyFor(firstAnswerable);",
+                  "if (autoBody) {",
+                  "  pm.collectionVariables.set('learnAnswerBody', JSON.stringify(autoBody, null, 2));",
+                  "  pm.collectionVariables.set('learnQuestionType', autoBody.type);",
+                  "  pm.collectionVariables.set('learnFlashcardId', autoBody.flashcardId);",
+                  "  pm.collectionVariables.set('learnSelectedAnswer', autoBody.selectedAnswer);",
+                  "  pm.collectionVariables.set('learnStatement', autoBody.statement || '');",
+                  "}",
+                  "",
+                  "const mcBody = answerBodyFor(multipleChoice);",
+                  "if (mcBody) pm.collectionVariables.set(\"learnMultipleChoiceAnswerBody\", JSON.stringify(mcBody, null, 2));",
+                  "",
+                  "const tfBody = answerBodyFor(trueFalse);",
+                  "if (tfBody) pm.collectionVariables.set(\"learnTrueFalseAnswerBody\", JSON.stringify(tfBody, null, 2));",
+                  "",
+                  "const writtenBody = answerBodyFor(written);",
+                  "if (writtenBody) pm.collectionVariables.set(\"learnWrittenAnswerBody\", JSON.stringify(writtenBody, null, 2));",
+                  "",
+                  "pm.collectionVariables.set('learnQuestionPreview', JSON.stringify(questions, null, 2));",
+                  "",
+                  "console.log(\"learnAnswerBody da duoc tao. Chay Submit Learn Answer - Auto.\");",
+                  "console.log(pm.collectionVariables.get(\"learnAnswerBody\"));",
+                  "",
+                  "pm.test(\"Co questions\", () => {",
+                  "  pm.expect(questions).to.be.an(\"array\").that.is.not.empty;",
+                  "});",
+                  "",
+                  "pm.test(\"Co it nhat mot cau co the tra loi\", () => {",
+                  "  pm.expect(answerable).to.be.an(\"array\").that.is.not.empty;",
+                  "});",
+                  "",
+                  "pm.test(\"Khong lo correctAnswer trong questions\", () => {",
+                  "  for (const q of questions) {",
+                  "    pm.expect(q).to.not.have.property('correctAnswer');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit Learn Answer - Auto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/learn/answer",
+            "body": {
+              "mode": "raw",
+              "raw": "{{learnAnswerBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "BUOC 2: Cham cau tra loi Learn tu dong. Chay Build Learn Round truoc de tao {{learnAnswerBody}}, sau do bam Send request nay. Muon test tiep thi chay Build Learn Round lai."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.collectionVariables.get('learnAnswerBody');",
+                  "if (!body) { throw new Error('Thieu learnAnswerBody. Hay chay Build Learn Round truoc.'); }",
+                  "try { JSON.parse(body); } catch (error) { throw new Error(`learnAnswerBody khong phai JSON hop le: ${error.message}`); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const json = pm.response.json();",
+                  "const data = json.data || {};",
+                  "pm.test(\"Co ket qua cham learn\", () => {",
+                  "  pm.expect(data).to.have.property('isCorrect');",
+                  "  pm.expect(data).to.have.property('correctAnswer');",
+                  "  pm.expect(data).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit Learn - Multiple Choice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/learn/answer",
+            "body": {
+              "mode": "raw",
+              "raw": "{{learnMultipleChoiceAnswerBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Test rieng cau chon dap an. Build Learn Round se lay option dau tien lam selectedAnswer mau."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.collectionVariables.get('learnMultipleChoiceAnswerBody');",
+                  "if (!body) { throw new Error('Chua co cau multiple_choice. Hay chay Build Learn Round lai hoac them nhieu the hon.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const json = pm.response.json();",
+                  "const data = json.data || {};",
+                  "pm.test(\"Co ket qua cham learn\", () => {",
+                  "  pm.expect(data).to.have.property('isCorrect');",
+                  "  pm.expect(data).to.have.property('correctAnswer');",
+                  "  pm.expect(data).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit Learn - True False",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/learn/answer",
+            "body": {
+              "mode": "raw",
+              "raw": "{{learnTrueFalseAnswerBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Test rieng cau dung/sai. Body gom flashcardId, type=true_false, selectedAnswer=true/false va statement de server cham."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.collectionVariables.get('learnTrueFalseAnswerBody');",
+                  "if (!body) { throw new Error('Chua co cau true_false. Hay chay Build Learn Round lai hoac them nhieu the hon.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const json = pm.response.json();",
+                  "const data = json.data || {};",
+                  "pm.test(\"Co ket qua cham learn\", () => {",
+                  "  pm.expect(data).to.have.property('isCorrect');",
+                  "  pm.expect(data).to.have.property('correctAnswer');",
+                  "  pm.expect(data).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit Learn - Written",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/learn/answer",
+            "body": {
+              "mode": "raw",
+              "raw": "{{learnWrittenAnswerBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Test rieng cau tra loi text. Build Learn Round se dien selectedAnswer mau la xin chao; co the sua bien learnWrittenAnswerBody neu muon test dung/sai."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.collectionVariables.get('learnWrittenAnswerBody');",
+                  "if (!body) { throw new Error('Chua co cau written. Hay chay Build Learn Round lai hoac them nhieu the hon.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const json = pm.response.json();",
+                  "const data = json.data || {};",
+                  "pm.test(\"Co ket qua cham learn\", () => {",
+                  "  pm.expect(data).to.have.property('isCorrect');",
+                  "  pm.expect(data).to.have.property('correctAnswer');",
+                  "  pm.expect(data).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "_Health Check",
+      "description": "Kiem tra server dang chay.",
+      "item": [
+        {
+          "name": "Ping Server",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:3000/",
+            "description": "Kiem tra server co dang chay khong. Khong co prefix /api/v1."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Server dang chay\", () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const baseUrl = pm.variables.get('baseUrl');",
+          "if (!baseUrl || !baseUrl.includes('/api/v1')) {",
+          "  throw new Error('baseUrl phai la http://localhost:3000/api/v1 de goi API backend.');",
+          "}"
+        ]
+      }
+    }
+  ]
+}

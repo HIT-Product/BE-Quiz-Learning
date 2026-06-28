@@ -7,7 +7,8 @@ import { envConfig } from '../../configs/index.js'
 import { emailQueue } from '../../queues/index.js'
 import { ApiError, hashToken, jwtUtils, logger } from '../../utils/index.js'
 import { userModel, sessionModel, passwordResetModel } from '../../models/index.js'
-// === Dùng chung: Tạo cặp token và lưu phiên đăng nhập ===
+
+// Tao token va phien dang nhap
 const issueTokens = async (user) => {
   const session = new sessionModel({ userId: user._id })
 
@@ -21,7 +22,8 @@ const issueTokens = async (user) => {
 
   return { accessToken, refreshToken }
 }
-// === Chức năng: Đăng ký tài khoản ===
+
+// Dang ky tai khoan
 const register = async ({ email, password, displayName }) => {
   const existing = await userModel.findOne({ email })
   if (existing) {
@@ -39,7 +41,8 @@ const register = async ({ email, password, displayName }) => {
 
   return issueTokens(user)
 }
-// === Chức năng: Đăng nhập bằng email và mật khẩu ===
+
+// Dang nhap
 const login = async ({ email, password }) => {
   const user = await userModel.findOne({ email })
   if (!user) {
@@ -53,7 +56,8 @@ const login = async ({ email, password }) => {
 
   return issueTokens(user)
 }
-// === Chức năng: Xoay vòng refresh token ===
+
+// Lam moi refresh token
 const refreshToken = async (token) => {
   let payload
   try {
@@ -91,15 +95,18 @@ const refreshToken = async (token) => {
 
   return { accessToken, refreshToken: newRefreshToken }
 }
-// === Chức năng: Thu hồi phiên đăng nhập hiện tại ===
+
+// Dang xuat
 const logout = async (token) => {
   await sessionModel.deleteOne({ tokenHash: hashToken(token) })
 }
-// === Chức năng: Thu hồi toàn bộ phiên của người dùng ===
+
+// Dang xuat tat ca thiet bi
 const logoutAll = async (userId) => {
   await sessionModel.deleteMany({ userId })
 }
-// === Chức năng: Đổi mật khẩu và tùy chọn đăng xuất thiết bị khác ===
+
+// Doi mat khau
 const changePassword = async ({ userId, currentSessionId, oldPassword, newPassword, logoutOtherDevices }) => {
   const user = await userModel.findById(userId)
   if (!user) {
@@ -133,8 +140,9 @@ const changePassword = async ({ userId, currentSessionId, oldPassword, newPasswo
   }
 }
 
-const OTP_TTL_MS = 10 * 60 * 1000 // 10 phut
-// === Chức năng: Tạo và gửi OTP khôi phục mật khẩu ===
+const OTP_TTL_MS = 10 * 60 * 1000
+
+// Gui OTP quen mat khau
 const forgotPassword = async ({ email }) => {
   const user = await userModel.findOne({ email })
   if (!user) {
@@ -157,7 +165,8 @@ const forgotPassword = async ({ email }) => {
     logger.error(`Khong the day job email quen mat khau: ${err.message}`)
   }
 }
-// === Chức năng: Xác thực OTP và đặt lại mật khẩu ===
+
+// Dat lai mat khau bang OTP
 const resetPassword = async ({ email, otp, newPassword }) => {
   const user = await userModel.findOne({ email })
   if (!user) {
@@ -177,9 +186,13 @@ const resetPassword = async ({ email, otp, newPassword }) => {
   await passwordResetModel.deleteMany({ userId: user._id })
   await sessionModel.deleteMany({ userId: user._id })
 }
+
+// Tao mat khau Google
 const generateGooglePassword = () => {
   return 'google_' + crypto.randomBytes(32).toString('hex') + '_' + Date.now()
 }
+
+// Dang nhap Google
 const googleLogin = async (profile) => {
   if (!profile) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Xác thực Google thất bại.')

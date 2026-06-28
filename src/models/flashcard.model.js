@@ -15,6 +15,10 @@ const flashcardSchema = new mongoose.Schema(
       type: String,
       required: true
     },
+    distractors: {
+      type: [String],
+      default: []
+    },
     sortOrder: {
       type: Number,
       default: 0
