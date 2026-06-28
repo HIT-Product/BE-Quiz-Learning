@@ -5,7 +5,7 @@ const updateProfile = {
     displayName: Joi.string().trim().max(120),
     avatarUrl: Joi.string().uri().allow(null, ''),
     defaultQuizSize: Joi.number().integer().min(1).max(100)
-  }).min(1) // it nhat mot truong de cap nhat
+  }).min(1)
 }
 
 export default {

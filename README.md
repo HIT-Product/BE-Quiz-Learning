@@ -207,7 +207,9 @@ Response lỗi:
 
 ## API hiện có
 
-Tất cả endpoint bên dưới sử dụng prefix `/api/v1`.
+Tất cả endpoint bên dưới sử dụng prefix `/api/v1`. Những endpoint có xác thực Bearer token yêu cầu header `Authorization: Bearer <accessToken>`.
+
+### Auth
 
 | Method | Endpoint | Xác thực | Chức năng |
 | --- | --- | --- | --- |
@@ -215,15 +217,72 @@ Tất cả endpoint bên dưới sử dụng prefix `/api/v1`.
 | POST | `/auth/login` | Không | Đăng nhập bằng email và mật khẩu |
 | GET | `/auth/google` | Không | Bắt đầu Google OAuth |
 | GET | `/auth/google-callback` | Google | Callback Google OAuth |
-| GET | `/auth/google/callback` | Google | Callback Google dạng chuẩn |
 | POST | `/auth/refresh-token` | Refresh cookie | Làm mới access token |
 | POST | `/auth/logout` | Refresh cookie | Đăng xuất phiên hiện tại |
 | POST | `/auth/logout-all` | Bearer token | Đăng xuất mọi thiết bị |
 | POST | `/auth/change-password` | Bearer token | Đổi mật khẩu |
 | POST | `/auth/forgot-password` | Không | Gửi OTP khôi phục mật khẩu |
 | POST | `/auth/reset-password` | Không | Đặt lại mật khẩu bằng OTP |
+
+### Users
+
+| Method | Endpoint | Xác thực | Chức năng |
+| --- | --- | --- | --- |
 | GET | `/users/me` | Bearer token | Lấy hồ sơ hiện tại |
 | PUT | `/users/me` | Bearer token | Cập nhật hồ sơ hiện tại |
+
+### Folders
+
+| Method | Endpoint | Xác thực | Chức năng |
+| --- | --- | --- | --- |
+| GET | `/folders` | Bearer token | Liệt kê thư mục của tôi |
+| POST | `/folders` | Bearer token | Tạo thư mục |
+| GET | `/folders/:id` | Bearer token | Chi tiết thư mục |
+| PUT | `/folders/:id` | Bearer token | Đổi tên thư mục |
+| DELETE | `/folders/:id` | Bearer token | Xóa thư mục |
+
+### Decks
+
+| Method | Endpoint | Xác thực | Chức năng |
+| --- | --- | --- | --- |
+| GET | `/decks` | Bearer token | Deck của tôi (lọc theo `?folderId=`) |
+| GET | `/decks/public` | Bearer token | Deck công khai |
+| POST | `/decks` | Bearer token | Tạo deck (có thể kèm `folderId`) |
+| GET | `/decks/:id` | Bearer token | Chi tiết deck |
+| PUT | `/decks/:id` | Bearer token | Cập nhật deck, xếp/chuyển/bỏ folder |
+| DELETE | `/decks/:id` | Bearer token | Xóa deck (kéo theo flashcard) |
+| POST | `/decks/:id/copy` | Bearer token | Sao chép deck công khai |
+
+### Flashcards
+
+| Method | Endpoint | Xác thực | Chức năng |
+| --- | --- | --- | --- |
+| GET | `/decks/:deckId/cards` | Bearer token | Liệt kê thẻ trong deck |
+| POST | `/decks/:deckId/cards` | Bearer token | Thêm thẻ |
+| PUT | `/decks/:deckId/cards/reorder` | Bearer token | Sắp xếp lại thứ tự thẻ |
+| PUT | `/decks/:deckId/cards/:cardId` | Bearer token | Sửa thẻ |
+| DELETE | `/decks/:deckId/cards/:cardId` | Bearer token | Xóa thẻ |
+
+### Quiz — Chế độ Kiểm tra
+
+| Method | Endpoint | Xác thực | Chức năng |
+| --- | --- | --- | --- |
+| POST | `/decks/:deckId/quiz` | Bearer token | Sinh đề quiz |
+| POST | `/decks/:deckId/quiz/submit` | Bearer token | Nộp bài, chấm điểm và lưu kết quả |
+
+### Study — Chế độ Lật thẻ
+
+| Method | Endpoint | Xác thực | Chức năng |
+| --- | --- | --- | --- |
+| GET | `/decks/:deckId/study` | Bearer token | Lấy thẻ kèm trạng thái (`?filter=all\|new\|learning`) |
+| POST | `/decks/:deckId/study/cards/:cardId/review` | Bearer token | Đánh dấu nhớ / chưa nhớ |
+
+### Learn — Chế độ Học thích ứng
+
+| Method | Endpoint | Xác thực | Chức năng |
+| --- | --- | --- | --- |
+| GET | `/decks/:deckId/learn` | Bearer token | Sinh vòng câu hỏi thích ứng |
+| POST | `/decks/:deckId/learn/answer` | Bearer token | Chấm câu trả lời, cập nhật tiến độ |
 
 ## Ví dụ gọi API
 
@@ -253,13 +312,14 @@ export async function login(email, password) {
 Import collection:
 
 ```text
-postman/auth.collection.json
+postman/HIT-Product.collection.json
 ```
 
 Các biến chính:
 
 - `baseUrl`: `http://localhost:3000/api/v1`
 - `accessToken`: tự lưu sau khi đăng ký hoặc đăng nhập
+- `folderId`, `deckId`, `cardId`: tự lưu sau khi tạo tương ứng
 - `otp`: OTP nhận qua email để đặt lại mật khẩu
 - Cookie jar của Postman tự lưu refresh token
 

@@ -1,7 +1,8 @@
 import { StatusCodes } from 'http-status-codes'
 import { userModel } from '../../models/index.js'
 import { ApiError } from '../../utils/index.js'
-// === Chức năng: Lấy hồ sơ cá nhân ===
+
+// Lay ho so ca nhan
 const getProfile = async (userId) => {
   const user = await userModel.findById(userId).select('-passwordHash')
   if (!user) {
@@ -9,7 +10,8 @@ const getProfile = async (userId) => {
   }
   return user
 }
-// === Chức năng: Cập nhật các trường hồ sơ được cho phép ===
+
+// Cap nhat ho so ca nhan
 const updateProfile = async (userId, updateData) => {
   const allowedFields = ['displayName', 'avatarUrl', 'defaultQuizSize']
   const updateFields = {}
