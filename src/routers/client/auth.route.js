@@ -7,7 +7,10 @@ import { validateMiddleware, authMiddleware } from '../../middlewares/index.js'
 
 const authRouter = Router()
 
-authRouter.post('/register', validateMiddleware(authValidation.register), authController.register)
+// Dang ky bang OTP: gui thong tin, xac thuc ma roi moi tao account
+authRouter.post('/register', validateMiddleware(authValidation.requestRegisterOtp), authController.requestRegisterOtp)
+authRouter.post('/register/verify-otp', validateMiddleware(authValidation.verifyRegisterOtp), authController.verifyRegisterOtp)
+authRouter.post('/register/resend-otp', validateMiddleware(authValidation.resendRegisterOtp), authController.resendRegisterOtp)
 authRouter.post('/login', validateMiddleware(authValidation.login), authController.login)
 
 authRouter.post('/refresh-token', authController.refreshToken)
@@ -21,6 +24,11 @@ authRouter.post(
   authController.changePassword
 )
 authRouter.post('/forgot-password', validateMiddleware(authValidation.forgotPassword), authController.forgotPassword)
+authRouter.post(
+  '/forgot-password/resend',
+  validateMiddleware(authValidation.resendForgotPasswordOtp),
+  authController.resendForgotPasswordOtp
+)
 authRouter.post('/reset-password', validateMiddleware(authValidation.resetPassword), authController.resetPassword)
 
 authRouter.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false }))
@@ -28,5 +36,6 @@ authRouter.get('/google', passport.authenticate('google', { scope: ['profile', '
 const googleCallbackHandlers = [passport.authenticate('google', { session: false }), authController.googleCallback]
 
 authRouter.get('/google-callback', ...googleCallbackHandlers)
+
 
 export default authRouter

@@ -1,7 +1,9 @@
 import crypto from 'crypto'
+import { envConfig } from '../configs/index.js'
 
 const hashToken = (token) => {
-  return crypto.createHash('sha256').update(token).digest('hex')
+  const pepper = envConfig.otp?.pepper || 'fallback-pepper-change-me'
+  return crypto.createHash('sha256').update(token + pepper).digest('hex')
 }
 
 export default hashToken
