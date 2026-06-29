@@ -19,6 +19,9 @@ const env = {
     secretRefresh: process.env.JWT_SECRET_REFRESH,
     expiresInRefresh: process.env.JWT_EXPIRESIN_REFRESH
   },
+  otp: {
+    pepper: process.env.OTP_PEPPER
+  },
   email: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
