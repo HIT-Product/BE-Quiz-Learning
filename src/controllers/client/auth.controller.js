@@ -3,15 +3,6 @@ import { StatusCodes } from 'http-status-codes'
 import { envConfig } from '../../configs/index.js'
 import { authService } from '../../services/client/index.js'
 import { catchAsync, response, ApiError, refreshCookieOptions } from '../../utils/index.js'
-// [POST] /auth/register
-const register = catchAsync(async (req, res) => {
-  const { email, password, displayName } = req.body
-
-  const { accessToken, refreshToken } = await authService.register({ email, password, displayName })
-
-  res.cookie('refreshToken', refreshToken, refreshCookieOptions)
-  return res.status(StatusCodes.CREATED).json(response(StatusCodes.CREATED, 'Đăng ký thành công.', { accessToken }))
-})
 // [POST] /auth/login
 const login = catchAsync(async (req, res) => {
   const { email, password } = req.body
@@ -83,6 +74,14 @@ const resetPassword = catchAsync(async (req, res) => {
     .json(response(StatusCodes.OK, 'Dat lai mat khau thanh cong. Vui long dang nhap lai.'))
 })
 
+// [POST] /auth/forgot-password/resend
+const resendForgotPasswordOtp = catchAsync(async (req, res) => {
+  await authService.resendForgotPasswordOtp(req.body)
+  return res
+    .status(StatusCodes.OK)
+    .json(response(StatusCodes.OK, 'Neu email ton tai, ma OTP moi da duoc gui. Vui long kiem tra hop thu.'))
+})
+
 // [GET] /auth/google-callback
 const googleCallback = catchAsync(async (req, res) => {
   try {
@@ -100,8 +99,29 @@ const googleCallback = catchAsync(async (req, res) => {
   }
 })
 
+// [POST] /auth/register
+const requestRegisterOtp = catchAsync(async (req, res) => {
+  const data = await authService.requestRegisterOtp(req.body)
+  return res
+    .status(StatusCodes.OK)
+    .json(response(StatusCodes.OK, 'Ma OTP da duoc gui ve email. Vui long kiem tra hop thu.', data))
+})
+
+// [POST] /auth/register/verify-otp
+const verifyRegisterOtp = catchAsync(async (req, res) => {
+  const { accessToken, refreshToken } = await authService.verifyRegisterOtp(req.body)
+
+  res.cookie('refreshToken', refreshToken, refreshCookieOptions)
+  return res.status(StatusCodes.CREATED).json(response(StatusCodes.CREATED, 'Đăng ký thành công.', { accessToken }))
+})
+
+// [POST] /auth/register/resend-otp
+const resendRegisterOtp = catchAsync(async (req, res) => {
+  const data = await authService.resendRegisterOtp(req.body)
+  return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Ma OTP moi da duoc gui ve email.', data))
+})
+
 export default {
-  register,
   login,
   refreshToken,
   logout,
@@ -109,5 +129,9 @@ export default {
   changePassword,
   forgotPassword,
   resetPassword,
-  googleCallback
+  resendForgotPasswordOtp,
+  googleCallback,
+  requestRegisterOtp,
+  verifyRegisterOtp,
+  resendRegisterOtp
 }

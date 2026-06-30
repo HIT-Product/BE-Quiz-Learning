@@ -41,6 +41,22 @@ const emailWorker = new Worker(
       logger.info(`Reset password OTP sent to ${email}`)
       return
     }
+    if (job.name === 'register-otp') {
+      const { email, displayName, otp } = job.data
+      await transporter.sendMail({
+        from: envConfig.email.user,
+        to: email,
+        subject: 'Ma xac thuc dang ky Quiz Learning',
+        html: `
+      <h2>Xin chao ${displayName}!</h2>
+      <p>Ma OTP xac thuc dang ky cua ban la:</p>
+      <h1>${otp}</h1>
+      <p>Ma co hieu luc trong 5 phut. Neu ban khong yeu cau, hay bo qua email nay.</p>
+    `
+      })
+      logger.info(`Register OTP sent to ${email}`)
+      return
+    }
     await transporter.sendMail({
       from: envConfig.email.user,
       to: email,
