@@ -170,6 +170,26 @@
       "key": "registerOtp",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "searchKeyword",
+      "value": "unit",
+      "type": "string"
+    },
+    {
+      "key": "searchSort",
+      "value": "newest",
+      "type": "string"
+    },
+    {
+      "key": "searchPage",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "searchLimit",
+      "value": "10",
+      "type": "string"
     }
   ],
   "item": [
@@ -997,6 +1017,112 @@
             ],
             "url": "{{baseUrl}}/decks/public",
             "description": "Liet ke deck public cua moi nguoi."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search Public Decks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/public?q={{searchKeyword}}&sort={{searchSort}}&page={{searchPage}}&limit={{searchLimit}}",
+            "description": "Tim deck public theo tu khoa q. Ho tro sort=newest|popular, page>=1, limit 1..50. Script luu deck dau tien vao {{deckId}} neu co ket qua."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Tra ve danh sach va phan trang\", () => {",
+                  "  pm.expect(json).to.have.property(\"data\");",
+                  "  pm.expect(json.data).to.be.an(\"array\");",
+                  "  pm.expect(json).to.have.property(\"total\");",
+                  "  pm.expect(json).to.have.property(\"page\");",
+                  "  pm.expect(json).to.have.property(\"limit\");",
+                  "});",
+                  "",
+                  "if (json.data && json.data.length > 0 && json.data[0]._id) {",
+                  "  pm.collectionVariables.set(\"deckId\", json.data[0]._id);",
+                  "  console.log(\"deckId search dau tien da duoc luu.\");",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search Public Decks - Popular",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/public?q={{searchKeyword}}&sort=popular&page=1&limit=10",
+            "description": "Tim deck public theo tu khoa va sap xep theo do pho bien."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Tra ve danh sach va phan trang\", () => {",
+                  "  pm.expect(json).to.have.property(\"data\");",
+                  "  pm.expect(json.data).to.be.an(\"array\");",
+                  "  pm.expect(json).to.have.property(\"total\");",
+                  "  pm.expect(json).to.have.property(\"page\");",
+                  "  pm.expect(json).to.have.property(\"limit\");",
+                  "});",
+                  "",
+                  "if (json.data && json.data.length > 0 && json.data[0]._id) {",
+                  "  pm.collectionVariables.set(\"deckId\", json.data[0]._id);",
+                  "  console.log(\"deckId search dau tien da duoc luu.\");",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Public Decks - Pagination",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/public?sort=newest&page=1&limit=10",
+            "description": "Lay deck public co phan trang, khong truyen q. Dung de test list/search mac dinh va validate response { data, total, page, limit }."
           },
           "event": [
             {

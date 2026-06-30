@@ -31,11 +31,17 @@ const deckSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+    copyCount: {
+      type: Number,
+      default: 0
+    },
     folderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Folder', default: null }
   },
   {
     timestamps: true
   }
 )
+
+deckSchema.index({ title: 'text', description: 'text' })
 
 export default model('Deck', deckSchema)
