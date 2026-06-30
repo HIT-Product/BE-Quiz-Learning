@@ -2,7 +2,7 @@
   "info": {
     "name": "HITProduct API",
     "_postman_id": "hit-product-api-v1",
-    "description": "Bo test Auth va User. Register/Login tu luu accessToken; refreshToken nam trong cookie HttpOnly. Forgot Password gui OTP; dien bien otp truoc khi Reset Password. Google Login tra redirect de mo trong trinh duyet.",
+    "description": "Postman collection cho HITProduct API. Auth dang ky bang OTP: Gui OTP Dang Ky -> Xac Thuc OTP Dang Ky. Co request gui lai OTP cho dang ky va quen mat khau.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -160,15 +160,25 @@
       "key": "studySessionPreview",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "registerEmail",
+      "value": "otp-user@example.com",
+      "type": "string"
+    },
+    {
+      "key": "registerOtp",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
     {
       "name": "Auth",
-      "description": "Cac endpoint xac thuc nguoi dung: dang ky, dang nhap, lam moi token, dang xuat. refreshToken duoc quan ly qua httpOnly cookie.",
+      "description": "Auth API: dang ky bang OTP email, gui lai OTP xac thuc email, dang nhap, token, dang xuat va quen mat khau.",
       "item": [
         {
-          "name": "Register",
+          "name": "Gui OTP Xac Thuc Email Dang Ky",
           "request": {
             "method": "POST",
             "header": [
@@ -180,38 +190,110 @@
             "url": "{{baseUrl}}/auth/register",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"displayName\": \"Nguyen Van A\"\n}",
+              "raw": "{\n  \"email\": \"{{registerEmail}}\",\n  \"password\": \"password123\",\n  \"displayName\": \"OTP User\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "Dang ky tai khoan moi. Dang ky xong la dang nhap luon (issue tokens + tao session).\n\n**Validation:**\n- `email`: bat buoc, phai la email hop le\n- `password`: bat buoc, toi thieu 6 ky tu\n- `displayName`: bat buoc, khong duoc de trong\n\n**Response 201:**\n```json\n{\n  \"statusCode\": 201,\n  \"message\": \"Dang ky thanh cong.\",\n  \"data\": { \"accessToken\": \"<jwt>\" }\n}\n```\nHeader tra ve co `Set-Cookie: refreshToken=...; HttpOnly; Path=/api/v1/auth`.\n\n**Errors:**\n- `400`: Validation that bai\n- `409`: Email da ton tai"
+            "description": "Gui OTP ve email de xac thuc dang ky. Endpoint nay chua tao user ngay, server chi luu pending registration. Sau khi nhan email, dien ma vao bien `registerOtp` roi chay Xac Thuc OTP Dang Ky."
           },
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.email) {",
+                  "  pm.collectionVariables.set(\"registerEmail\", json.data.email);",
+                  "}",
+                  "",
+                  "pm.test(\"Tra ve email va expiresIn\", () => {",
+                  "  pm.expect(json.data).to.have.property(\"email\");",
+                  "  pm.expect(json.data).to.have.property(\"expiresIn\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xac Thuc OTP Dang Ky",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/register/verify-otp",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{registerEmail}}\",\n  \"otp\": \"{{registerOtp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Xac thuc OTP dang ky. Neu dung, server tao user, tra `accessToken` va set cookie `refreshToken`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
                   "",
                   "const json = pm.response.json();",
                   "if (json.data && json.data.accessToken) {",
-                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
-                  "  console.log('accessToken da duoc luu.');",
+                  "  pm.collectionVariables.set(\"accessToken\", json.data.accessToken);",
                   "}",
                   "",
-                  "pm.test(\"Body chi co accessToken (khong lo refreshToken)\", () => {",
-                  "  pm.expect(json.data).to.have.property('accessToken');",
-                  "  pm.expect(json.data).to.not.have.property('refreshToken');",
-                  "});",
-                  "",
-                  "pm.test(\"Co cookie refreshToken (HttpOnly)\", () => {",
-                  "  pm.expect(pm.cookies.has('refreshToken')).to.be.true;",
+                  "pm.test(\"Co accessToken\", () => {",
+                  "  pm.expect(json.data).to.have.property(\"accessToken\");",
                   "});"
-                ],
-                "type": "text/javascript"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Gui Lai OTP Xac Thuc Email Dang Ky",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/register/resend-otp",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{registerEmail}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Gui lai OTP xac thuc email dang ky. Can co pending registration tu request Gui OTP Xac Thuc Email Dang Ky."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
               }
             }
           ]
@@ -414,6 +496,40 @@
               }
             },
             "description": "Gui OTP dat lai mat khau. Response khong lam lo email co ton tai."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Gui Lai OTP Quen Mat Khau",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/forgot-password/resend",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Gui lai OTP quen mat khau. Sau khi nhan OTP moi, dien vao bien `otp` de chay Reset Password."
           },
           "event": [
             {

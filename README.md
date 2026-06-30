@@ -63,6 +63,7 @@ JWT_SECRET_REFRESH=replace-with-a-long-random-secret
 JWT_EXPIRESIN_LOGIN=15m
 JWT_EXPIRESIN_OTP=5m
 JWT_EXPIRESIN_REFRESH=7d
+OTP_PEPPER=replace-with-a-long-random-pepper
 
 # Redis
 REDIS_HOST=localhost
@@ -211,18 +212,28 @@ Tất cả endpoint bên dưới sử dụng prefix `/api/v1`. Những endpoint 
 
 ### Auth
 
-| Method | Endpoint | Xác thực | Chức năng |
+Luong dang ky hien tai dung OTP email:
+
+1. Goi `POST /auth/register` de gui OTP va luu pending registration.
+2. Nguoi dung nhap OTP tu email.
+3. Goi `POST /auth/register/verify-otp` de tao tai khoan, nhan `accessToken` va refresh token trong cookie HttpOnly.
+4. Neu can gui lai OTP khi pending con han, goi `POST /auth/register/resend-otp`.
+
+| Method | Endpoint | Xac thuc | Chuc nang |
 | --- | --- | --- | --- |
-| POST | `/auth/register` | Không | Đăng ký tài khoản |
-| POST | `/auth/login` | Không | Đăng nhập bằng email và mật khẩu |
-| GET | `/auth/google` | Không | Bắt đầu Google OAuth |
+| POST | `/auth/register` | Khong | Gui OTP dang ky, chua tao tai khoan |
+| POST | `/auth/register/verify-otp` | Khong | Xac thuc OTP, tao tai khoan va dang nhap |
+| POST | `/auth/register/resend-otp` | Khong | Gui lai OTP dang ky |
+| POST | `/auth/login` | Khong | Dang nhap bang email va mat khau |
+| GET | `/auth/google` | Khong | Bat dau Google OAuth |
 | GET | `/auth/google-callback` | Google | Callback Google OAuth |
-| POST | `/auth/refresh-token` | Refresh cookie | Làm mới access token |
-| POST | `/auth/logout` | Refresh cookie | Đăng xuất phiên hiện tại |
-| POST | `/auth/logout-all` | Bearer token | Đăng xuất mọi thiết bị |
-| POST | `/auth/change-password` | Bearer token | Đổi mật khẩu |
-| POST | `/auth/forgot-password` | Không | Gửi OTP khôi phục mật khẩu |
-| POST | `/auth/reset-password` | Không | Đặt lại mật khẩu bằng OTP |
+| POST | `/auth/refresh-token` | Refresh cookie | Lam moi access token |
+| POST | `/auth/logout` | Refresh cookie | Dang xuat phien hien tai |
+| POST | `/auth/logout-all` | Bearer token | Dang xuat moi thiet bi |
+| POST | `/auth/change-password` | Bearer token | Doi mat khau |
+| POST | `/auth/forgot-password` | Khong | Gui OTP khoi phuc mat khau |
+| POST | `/auth/forgot-password/resend` | Khong | Gui lai OTP khoi phuc mat khau |
+| POST | `/auth/reset-password` | Khong | Dat lai mat khau bang OTP |
 
 ### Users
 
@@ -315,12 +326,21 @@ Import collection:
 postman/HIT-Product.collection.json
 ```
 
-Các biến chính:
+Cac bien chinh:
 
 - `baseUrl`: `http://localhost:3000/api/v1`
-- `accessToken`: tự lưu sau khi đăng ký hoặc đăng nhập
-- `folderId`, `deckId`, `cardId`: tự lưu sau khi tạo tương ứng
-- `otp`: OTP nhận qua email để đặt lại mật khẩu
-- Cookie jar của Postman tự lưu refresh token
+- `accessToken`: tu luu sau khi xac thuc OTP dang ky hoac dang nhap
+- `registerEmail`: email dung cho luong dang ky bang OTP
+- `registerOtp`: OTP dang ky nhan qua email, can dien thu cong truoc khi goi request xac thuc
+- `otp`: OTP nhan qua email de dat lai mat khau
+- `folderId`, `deckId`, `cardId`: tu luu sau khi tao tuong ung
+- Cookie jar cua Postman tu luu refresh token
 
-Google Login sử dụng OAuth redirect. Nếu Postman không tự theo redirect, mở URL trong header `Location` bằng trình duyệt.
+Thu tu test nhanh trong Postman:
+
+1. Chay `Gui OTP Xac Thuc Email Dang Ky`.
+2. Lay OTP trong email va dien vao bien `registerOtp`.
+3. Chay `Xac Thuc OTP Dang Ky` de tao tai khoan va luu `accessToken`.
+4. Dung `Gui Lai OTP Xac Thuc Email Dang Ky` hoac `Gui Lai OTP Quen Mat Khau` khi can gui lai ma.
+
+Google Login su dung OAuth redirect. Neu Postman khong tu theo redirect, mo URL trong header `Location` bang trinh duyet.

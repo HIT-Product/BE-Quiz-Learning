@@ -14,6 +14,18 @@ const passwordResetSchema = new mongoose.Schema(
     expiresAt: {
       type: Date,
       required: true
+    },
+    lastSentAt: {
+      type: Date,
+      default: Date.now
+    },
+    sendCount: {
+      type: Number,
+      default: 1
+    },
+    attemptCount: {
+      type: Number,
+      default: 0
     }
   },
   {
@@ -21,6 +33,7 @@ const passwordResetSchema = new mongoose.Schema(
   }
 )
 
+// TTL index: Mongo tu xoa ban ghi khi qua expiresAt
 passwordResetSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 })
 
 export default model('PasswordReset', passwordResetSchema)
