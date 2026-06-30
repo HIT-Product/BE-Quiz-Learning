@@ -10,10 +10,11 @@ const list = catchAsync(async (req, res) => {
 })
 
 // [GET] /decks/public
-const listPublic = catchAsync(async (req, res) => {
-  const decks = await deckService.listPublic()
-  res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Lấy danh sách bộ thẻ công khai thành công.', decks))
-})
+const listPublic = async (req, res) => {
+  const { q, sort, page, limit } = req.query
+  const result = await deckService.listPublic({ q, sort, page, limit })
+  res.status(StatusCodes.OK).json(result)
+}
 
 // [GET] /decks/:id
 const getById = catchAsync(async (req, res) => {
