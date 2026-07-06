@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { folderModel, deckModel } from '../../models/index.js'
 import { ApiError } from '../../utils/index.js'
 
-// Tim folder so huu
+// Tìm folder sở hữu
 const findOwnedFolder = async (folderId, ownerId) => {
   const folder = await folderModel.findOne({ _id: folderId, ownerId })
   if (!folder) {
@@ -12,22 +12,22 @@ const findOwnedFolder = async (folderId, ownerId) => {
   return folder
 }
 
-// Lay danh sach folder
+// Lấy danh sách folder
 const list = async (ownerId) => {
   return folderModel.find({ ownerId }).sort({ createdAt: -1 })
 }
 
-// Lay chi tiet folder
+// Lấy chi tiết folder
 const getById = async (folderId, ownerId) => {
   return findOwnedFolder(folderId, ownerId)
 }
 
-// Tao folder
+// Tạo folder
 const create = async (ownerId, { name }) => {
   return folderModel.create({ ownerId, name })
 }
 
-// Cap nhat folder
+// Cập nhật folder
 const update = async (folderId, ownerId, { name }) => {
   const folder = await findOwnedFolder(folderId, ownerId)
   folder.name = name
@@ -35,7 +35,7 @@ const update = async (folderId, ownerId, { name }) => {
   return folder
 }
 
-// Xoa folder
+// Xoá folder
 const remove = async (folderId, ownerId) => {
   const folder = await findOwnedFolder(folderId, ownerId)
 
