@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { envConfig } from '../../configs/index.js'
+import { COOKIE_NAME } from '../../constants/index.js'
 import { authService } from '../../services/client/index.js'
 import { catchAsync, response, ApiError, refreshCookieOptions } from '../../utils/index.js'
 // [POST] /auth/login
@@ -9,36 +10,36 @@ const login = catchAsync(async (req, res) => {
 
   const { accessToken, refreshToken } = await authService.login({ email, password })
 
-  res.cookie('refreshToken', refreshToken, refreshCookieOptions)
+  res.cookie(COOKIE_NAME.REFRESH_TOKEN, refreshToken, refreshCookieOptions)
   return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Đăng nhập thành công.', { accessToken }))
 })
 // [POST] /auth/refresh-token
 const refreshToken = catchAsync(async (req, res) => {
-  const token = req.cookies.refreshToken
+  const token = req.cookies[COOKIE_NAME.REFRESH_TOKEN]
   if (!token) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'refreshToken không tồn tại.')
   }
 
   const { accessToken, refreshToken: newRefreshToken } = await authService.refreshToken(token)
 
-  res.cookie('refreshToken', newRefreshToken, refreshCookieOptions)
+  res.cookie(COOKIE_NAME.REFRESH_TOKEN, newRefreshToken, refreshCookieOptions)
   return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Cấp token mới thành công.', { accessToken }))
 })
 // [POST] /auth/logout
 const logout = catchAsync(async (req, res) => {
-  const token = req.cookies.refreshToken
+  const token = req.cookies[COOKIE_NAME.REFRESH_TOKEN]
   if (token) {
     await authService.logout(token)
   }
 
-  res.clearCookie('refreshToken', refreshCookieOptions)
+  res.clearCookie(COOKIE_NAME.REFRESH_TOKEN, refreshCookieOptions)
   return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Đăng xuất thành công.'))
 })
 // [POST] /auth/logout-all
 const logoutAll = catchAsync(async (req, res) => {
   await authService.logoutAll(req.user._id)
 
-  res.clearCookie('refreshToken', refreshCookieOptions)
+  res.clearCookie(COOKIE_NAME.REFRESH_TOKEN, refreshCookieOptions)
   return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Đăng xuất tất cả thiết bị thành công.'))
 })
 // [POST] /auth/change-password
@@ -87,7 +88,7 @@ const googleCallback = catchAsync(async (req, res) => {
   try {
     const { accessToken, refreshToken } = await authService.googleLogin(req.user)
 
-    res.cookie('refreshToken', refreshToken, refreshCookieOptions)
+    res.cookie(COOKIE_NAME.REFRESH_TOKEN, refreshToken, refreshCookieOptions)
 
     return res.redirect(
       envConfig.server.clientUrl + '/auth/login?success=true&accessToken=' + encodeURIComponent(accessToken)
@@ -111,7 +112,7 @@ const requestRegisterOtp = catchAsync(async (req, res) => {
 const verifyRegisterOtp = catchAsync(async (req, res) => {
   const { accessToken, refreshToken } = await authService.verifyRegisterOtp(req.body)
 
-  res.cookie('refreshToken', refreshToken, refreshCookieOptions)
+  res.cookie(COOKIE_NAME.REFRESH_TOKEN, refreshToken, refreshCookieOptions)
   return res.status(StatusCodes.CREATED).json(response(StatusCodes.CREATED, 'Đăng ký thành công.', { accessToken }))
 })
 
