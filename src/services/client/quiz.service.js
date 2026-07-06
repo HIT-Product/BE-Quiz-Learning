@@ -1,81 +1,33 @@
 import { StatusCodes } from 'http-status-codes'
 
+import {
+  DECK_VISIBILITY,
+  LEARNING_STATUS,
+  QUESTION_LIMITS,
+  QUESTION_TYPE
+} from '../../constants/index.js'
 import { deckModel, flashcardModel, quizAttemptModel, cardProgressModel, userModel } from '../../models/index.js'
 import { ApiError } from '../../utils/index.js'
-import { shuffle, normalize } from '../../utils/quiz.js'
+import { shuffle, matchAnswer } from '../../utils/quiz.js'
+import { buildMultipleChoice, buildTrueFalse, buildWritten } from './question.service.js'
 
-const MC_OPTION_COUNT = 4
-
-// Kiem tra quyen truy cap deck
+// Kiểm tra quyền truy cập deck
 const getAccessibleDeck = async (deckId, userId) => {
   const deck = await deckModel.findById(deckId)
   if (!deck) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy bộ thẻ.')
   }
   const isOwner = deck.ownerId.toString() === userId.toString()
-  if (!isOwner && deck.visibility !== 'public') {
+  if (!isOwner && deck.visibility !== DECK_VISIBILITY.PUBLIC) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy bộ thẻ.')
   }
   return deck
 }
 
-// Tao cau hoi multiple choice
-const buildMultipleChoice = (card, allCards) => {
-  const candidates = [
-    ...(card.distractors || []),
-    ...allCards.filter((c) => c._id.toString() !== card._id.toString()).map((c) => c.back)
-  ]
-  const seen = new Set([normalize(card.back)])
-  const distractors = shuffle(candidates)
-    .filter((answer) => {
-      const key = normalize(answer)
-      if (!key || seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-    .slice(0, MC_OPTION_COUNT - 1)
-
-  if (distractors.length === 0) {
-    return buildWritten(card)
-  }
-
-  return {
-    type: 'multiple_choice',
-    flashcardId: card._id,
-    questionText: card.front,
-    options: shuffle([card.back, ...distractors]),
-    correctAnswer: card.back
-  }
-}
-
-// Tao cau hoi true false
-const buildTrueFalse = (card, allCards) => {
-  const others = allCards.filter(
-    (c) => c._id.toString() !== card._id.toString() && normalize(c.back) !== normalize(card.back)
-  )
-  const isTrue = others.length === 0 ? true : Math.random() < 0.5
-  const shown = isTrue ? card.back : shuffle(others)[0].back
-
-  return {
-    type: 'true_false',
-    flashcardId: card._id,
-    questionText: `"${card.front}" có nghĩa là "${shown}"?`,
-    correctAnswer: isTrue ? 'true' : 'false'
-  }
-}
-
-// Tao cau hoi written
-const buildWritten = (card) => ({
-  type: 'written',
-  flashcardId: card._id,
-  questionText: card.front,
-  correctAnswer: card.back
-})
-
 const builders = {
-  multiple_choice: buildMultipleChoice,
-  true_false: buildTrueFalse,
-  written: buildWritten
+  [QUESTION_TYPE.MULTIPLE_CHOICE]: buildMultipleChoice,
+  [QUESTION_TYPE.TRUE_FALSE]: buildTrueFalse,
+  [QUESTION_TYPE.WRITTEN]: buildWritten
 }
 
 // Sinh quiz
@@ -87,15 +39,15 @@ const generate = async (deckId, userId, config) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Bộ thẻ chưa có thẻ học nào.')
   }
 
-  const types = config.types && config.types.length ? config.types : ['multiple_choice']
+  const types = config.types && config.types.length ? config.types : [QUESTION_TYPE.MULTIPLE_CHOICE]
 
-  const needsOtherCards = types.includes('multiple_choice') || types.includes('true_false')
+  const needsOtherCards = types.includes(QUESTION_TYPE.MULTIPLE_CHOICE) || types.includes(QUESTION_TYPE.TRUE_FALSE)
   if (needsOtherCards && cards.length < 2) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Cần ít nhất 2 thẻ cho dạng trắc nghiệm hoặc đúng/sai.')
   }
 
   const user = await userModel.findById(userId).select('defaultQuizSize')
-  const limit = config.limit || user?.defaultQuizSize || 10
+  const limit = config.limit || user?.defaultQuizSize || QUESTION_LIMITS.DEFAULT_QUIZ_LIMIT
 
   const selected = shuffle(cards).slice(0, limit)
   const questions = selected.map((card, index) => builders[types[index % types.length]](card, cards))
@@ -128,7 +80,7 @@ const generate = async (deckId, userId, config) => {
   return { attemptId: attempt._id, startedAt: attempt.startedAt, questions: safeQuestions }
 }
 
-// Nop quiz
+// Nộp quiz
 const submit = async (deckId, userId, payload) => {
   await getAccessibleDeck(deckId, userId)
 
@@ -145,12 +97,12 @@ const submit = async (deckId, userId, payload) => {
   for (const ans of attempt.answers) {
     const selected = selectedMap.get(ans._id.toString()) ?? null
     ans.selectedAnswer = selected
-    ans.isCorrect = normalize(selected || '') === normalize(ans.correctAnswer)
+    ans.isCorrect = matchAnswer(selected || '', ans.correctAnswer)
     if (ans.isCorrect) correctCount++
   }
 
   attempt.correctCount = correctCount
-  attempt.score = Math.round((correctCount / attempt.totalQuestions) * 100)
+  attempt.score = Math.round((correctCount / attempt.totalQuestions) * QUESTION_LIMITS.SCORE_PERCENT_MAX)
   attempt.submittedAt = new Date()
   await attempt.save()
 
@@ -158,7 +110,10 @@ const submit = async (deckId, userId, payload) => {
     updateOne: {
       filter: { userId, flashcardId: ans.flashcardId },
       update: {
-        $set: { status: ans.isCorrect ? 'remembered' : 'learning', lastReviewedAt: new Date() },
+        $set: {
+          status: ans.isCorrect ? LEARNING_STATUS.REMEMBERED : LEARNING_STATUS.LEARNING,
+          lastReviewedAt: new Date()
+        },
         $inc: { reviewCount: 1 },
         $setOnInsert: { userId, flashcardId: ans.flashcardId }
       },

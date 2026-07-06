@@ -1,35 +1,47 @@
 import { StatusCodes } from 'http-status-codes'
 
+import {
+  DECK_VISIBILITY,
+  LEARNING_STATUS,
+  LEARN_QUESTION_TYPES,
+  QUESTION_LIMITS,
+  QUESTION_TYPE,
+  TRUE_FALSE_ANSWER
+} from '../../constants/index.js'
 import { deckModel, flashcardModel, cardProgressModel } from '../../models/index.js'
 import { ApiError } from '../../utils/index.js'
-import { shuffle, normalize } from '../../utils/quiz.js'
+import { shuffle, normalize, matchAnswer } from '../../utils/quiz.js'
 import { buildMultipleChoice, buildTrueFalse, buildWritten, buildFlashcard } from './question.service.js'
 
-// Kiem tra quyen truy cap deck
+// Kiểm tra quyền truy cập deck
 const getAccessibleDeck = async (deckId, userId) => {
   const deck = await deckModel.findById(deckId)
   if (!deck) throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy bộ thẻ.')
   const isOwner = deck.ownerId.toString() === userId.toString()
-  if (!isOwner && deck.visibility !== 'public') {
+  if (!isOwner && deck.visibility !== DECK_VISIBILITY.PUBLIC) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy bộ thẻ.')
   }
   return deck
 }
 
-// Chon dang cau hoi
+// Chọn dạng câu hỏi
 const pickType = (status, allowedTypes) => {
   const order = {
-    new: ['multiple_choice', 'true_false', 'written'],
-    learning: ['true_false', 'multiple_choice', 'written'],
-    remembered: ['written', 'multiple_choice', 'true_false']
+    [LEARNING_STATUS.NEW]: [QUESTION_TYPE.MULTIPLE_CHOICE, QUESTION_TYPE.TRUE_FALSE, QUESTION_TYPE.WRITTEN],
+    [LEARNING_STATUS.LEARNING]: [QUESTION_TYPE.TRUE_FALSE, QUESTION_TYPE.MULTIPLE_CHOICE, QUESTION_TYPE.WRITTEN],
+    [LEARNING_STATUS.REMEMBERED]: [QUESTION_TYPE.WRITTEN, QUESTION_TYPE.MULTIPLE_CHOICE, QUESTION_TYPE.TRUE_FALSE]
   }
-  const prefer = order[status] || order.new
+  const prefer = order[status] || order[LEARNING_STATUS.NEW]
   const usable = prefer.filter((t) => allowedTypes.includes(t))
-  return usable[0] || 'multiple_choice'
+  return usable[0] || QUESTION_TYPE.MULTIPLE_CHOICE
 }
 
-// Sinh vong hoc
-const buildRound = async (deckId, userId, { limit = 10, onlyUnlearned = true, types }) => {
+// Sinh vòng học
+const buildRound = async (
+  deckId,
+  userId,
+  { limit = QUESTION_LIMITS.DEFAULT_LEARN_LIMIT, onlyUnlearned = true, types }
+) => {
   await getAccessibleDeck(deckId, userId)
 
   const allCards = await flashcardModel.find({ deckId })
@@ -42,37 +54,39 @@ const buildRound = async (deckId, userId, { limit = 10, onlyUnlearned = true, ty
 
   let pool = allCards
   if (onlyUnlearned) {
-    pool = allCards.filter((c) => (statusMap.get(c._id.toString()) || 'new') !== 'remembered')
+    pool = allCards.filter(
+      (c) => (statusMap.get(c._id.toString()) || LEARNING_STATUS.NEW) !== LEARNING_STATUS.REMEMBERED
+    )
     if (pool.length === 0) pool = allCards
   }
 
-  const allowedTypes = types && types.length ? types : ['multiple_choice', 'true_false', 'written']
+  const allowedTypes = types && types.length ? types : LEARN_QUESTION_TYPES
 
   const selected = shuffle(pool).slice(0, limit)
   const questions = selected.map((card) => {
-    const status = statusMap.get(card._id.toString()) || 'new'
+    const status = statusMap.get(card._id.toString()) || LEARNING_STATUS.NEW
 
-    if (status === 'new' && Math.random() < 0.5) {
+    if (status === LEARNING_STATUS.NEW && Math.random() < 0.5) {
       return buildFlashcard(card)
     }
 
     const type = pickType(status, allowedTypes)
-    if (type === 'multiple_choice') return buildMultipleChoice(card, allCards)
-    if (type === 'true_false') return buildTrueFalse(card, allCards)
+    if (type === QUESTION_TYPE.MULTIPLE_CHOICE) return buildMultipleChoice(card, allCards)
+    if (type === QUESTION_TYPE.TRUE_FALSE) return buildTrueFalse(card, allCards)
     return buildWritten(card)
   })
 
   return { deckId, questions }
 }
 
-// Tinh trang thai hoc tiep theo
+// Tính trạng thái học tiếp theo
 const nextStatus = (current, isCorrect) => {
-  if (!isCorrect) return 'learning'
-  if (current === 'new') return 'learning'
-  return 'remembered'
+  if (!isCorrect) return LEARNING_STATUS.LEARNING
+  if (current === LEARNING_STATUS.NEW) return LEARNING_STATUS.LEARNING
+  return LEARNING_STATUS.REMEMBERED
 }
 
-// Cham cau tra loi
+// Chấm câu trả lời
 const submitAnswer = async (deckId, userId, payload) => {
   await getAccessibleDeck(deckId, userId)
 
@@ -83,20 +97,20 @@ const submitAnswer = async (deckId, userId, payload) => {
 
   let isCorrect
   let correctAnswer
-  if (type === 'true_false') {
+  if (type === QUESTION_TYPE.TRUE_FALSE) {
     if (statement === undefined) {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'Thiếu statement cho câu đúng/sai.')
     }
-    const trueValue = normalize(statement) === normalize(card.back) ? 'true' : 'false'
+    const trueValue = normalize(statement) === normalize(card.back) ? TRUE_FALSE_ANSWER.TRUE : TRUE_FALSE_ANSWER.FALSE
     isCorrect = (selectedAnswer || '').toLowerCase() === trueValue
     correctAnswer = trueValue
   } else {
     correctAnswer = card.back
-    isCorrect = normalize(selectedAnswer || '') === normalize(correctAnswer)
+    isCorrect = matchAnswer(selectedAnswer || '', correctAnswer)
   }
 
   const existing = await cardProgressModel.findOne({ userId, flashcardId })
-  const current = existing?.status || 'new'
+  const current = existing?.status || LEARNING_STATUS.NEW
   const status = nextStatus(current, isCorrect)
 
   const progress = await cardProgressModel.findOneAndUpdate(
