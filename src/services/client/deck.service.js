@@ -28,11 +28,6 @@ const list = async (ownerId, { folderId } = {}) => {
   return deckModel.find(filter).sort({ createdAt: -1 })
 }
 
-// Lay danh sach deck public
-const listPublic = async () => {
-  return deckModel.find({ visibility: 'public' }).sort({ createdAt: -1 })
-}
-
 // Lay chi tiet deck
 const getById = async (deckId, userId) => {
   const deck = await deckModel.findById(deckId)
@@ -107,7 +102,42 @@ const copy = async (sourceDeckId, userId) => {
     copiedBy: userId
   })
 
+  await deckModel.updateOne({ _id: sourceDeckId }, { $inc: { copyCount: 1 } })
+
   return newDeck
+}
+
+const listPublic = async ({ q, sort, page, limit } = {}) => {
+  // Tự coerce + default vì middleware không ghi lại req.query, query params là string
+  const pageNum = Math.max(1, Number(page) || 1)
+  const limitNum = Math.min(50, Math.max(1, Number(limit) || 20))
+  const sortKey = sort === 'popular' ? 'popular' : 'newest'
+  const keyword = (q || '').trim()
+  const skip = (pageNum - 1) * limitNum
+
+  // Có từ khóa: dùng $text search, sort theo relevance score
+  if (keyword) {
+    const filter = { visibility: 'public', $text: { $search: keyword } }
+    const projection = { score: { $meta: 'textScore' } }
+    const [data, total] = await Promise.all([
+      deckModel
+        .find(filter, projection)
+        .sort({ score: { $meta: 'textScore' } })
+        .skip(skip)
+        .limit(limitNum),
+      deckModel.countDocuments(filter)
+    ])
+    return { data, total, page: pageNum, limit: limitNum }
+  }
+
+  // Không có từ khóa: sort theo field
+  const sortField = sortKey === 'popular' ? { copyCount: -1 } : { createdAt: -1 }
+  const filter = { visibility: 'public' }
+  const [data, total] = await Promise.all([
+    deckModel.find(filter).sort(sortField).skip(skip).limit(limitNum),
+    deckModel.countDocuments(filter)
+  ])
+  return { data, total, page: pageNum, limit: limitNum }
 }
 
 export default { list, listPublic, getById, create, update, remove, copy }
