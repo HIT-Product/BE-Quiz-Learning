@@ -1,9 +1,10 @@
 import { StatusCodes } from 'http-status-codes'
 
+import { DECK_VISIBILITY, FLASHCARD_SOURCE } from '../../constants/index.js'
 import { deckModel, flashcardModel, folderModel, deckCopyLogModel } from '../../models/index.js'
 import { ApiError } from '../../utils/index.js'
 
-// Tim deck so huu
+// Tìm deck sở hữu
 const findOwnedDeck = async (deckId, ownerId) => {
   const deck = await deckModel.findOne({ _id: deckId, ownerId })
   if (!deck) {
@@ -12,7 +13,7 @@ const findOwnedDeck = async (deckId, ownerId) => {
   return deck
 }
 
-// Kiem tra folder so huu
+// Kiểm tra folder sở hữu
 const assertOwnedFolder = async (folderId, ownerId) => {
   if (!folderId) return
   const folder = await folderModel.findOne({ _id: folderId, ownerId })
@@ -21,19 +22,19 @@ const assertOwnedFolder = async (folderId, ownerId) => {
   }
 }
 
-// Lay danh sach deck cua toi
+// Lấy danh sách deck của tôi
 const list = async (ownerId, { folderId } = {}) => {
   const filter = { ownerId }
   if (folderId) filter.folderId = folderId
   return deckModel.find(filter).sort({ createdAt: -1 })
 }
 
-// Lay danh sach deck public
+// Lấy danh sách deck public
 const listPublic = async () => {
-  return deckModel.find({ visibility: 'public' }).sort({ createdAt: -1 })
+  return deckModel.find({ visibility: DECK_VISIBILITY.PUBLIC }).sort({ createdAt: -1 })
 }
 
-// Lay chi tiet deck
+// Lấy chi tiết deck
 const getById = async (deckId, userId) => {
   const deck = await deckModel.findById(deckId)
   if (!deck) {
@@ -41,20 +42,20 @@ const getById = async (deckId, userId) => {
   }
 
   const isOwner = deck.ownerId.toString() === userId.toString()
-  if (!isOwner && deck.visibility !== 'public') {
+  if (!isOwner && deck.visibility !== DECK_VISIBILITY.PUBLIC) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy bộ thẻ.')
   }
 
   return deck
 }
 
-// Tao deck
+// Tạo deck
 const create = async (ownerId, payload) => {
   await assertOwnedFolder(payload.folderId, ownerId)
   return deckModel.create({ ...payload, ownerId })
 }
 
-// Cap nhat deck
+// Cập nhật deck
 const update = async (deckId, ownerId, payload) => {
   const deck = await findOwnedDeck(deckId, ownerId)
   if (payload.folderId !== undefined) {
@@ -65,7 +66,7 @@ const update = async (deckId, ownerId, payload) => {
   return deck
 }
 
-// Xoa deck
+// Xoá deck
 const remove = async (deckId, ownerId) => {
   const deck = await findOwnedDeck(deckId, ownerId)
   await flashcardModel.deleteMany({ deckId: deck._id })
@@ -75,7 +76,7 @@ const remove = async (deckId, ownerId) => {
 // Copy deck public
 const copy = async (sourceDeckId, userId) => {
   const source = await deckModel.findById(sourceDeckId)
-  if (!source || source.visibility !== 'public') {
+  if (!source || source.visibility !== DECK_VISIBILITY.PUBLIC) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy bộ thẻ công khai.')
   }
 
@@ -85,7 +86,7 @@ const copy = async (sourceDeckId, userId) => {
     ownerId: userId,
     title: source.title,
     description: source.description,
-    visibility: 'private',
+    visibility: DECK_VISIBILITY.PRIVATE,
     copiedFromId: source._id,
     cardCount: sourceCards.length
   })
@@ -96,7 +97,7 @@ const copy = async (sourceDeckId, userId) => {
       front: card.front,
       back: card.back,
       sortOrder: card.sortOrder,
-      source: 'copy'
+      source: FLASHCARD_SOURCE.COPY
     }))
     await flashcardModel.insertMany(clonedCards)
   }
