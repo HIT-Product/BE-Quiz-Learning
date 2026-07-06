@@ -4,11 +4,12 @@ import crypto from 'node:crypto'
 import { StatusCodes } from 'http-status-codes'
 
 import { envConfig } from '../../configs/index.js'
+import { AUTH_LIMITS, EMAIL_JOB_NAME, GOOGLE_AUTH } from '../../constants/index.js'
 import { emailQueue } from '../../queues/index.js'
 import { ApiError, hashToken, jwtUtils, logger } from '../../utils/index.js'
 import { userModel, sessionModel, passwordResetModel, pendingRegistrationModel } from '../../models/index.js'
 
-// Tao token va phien dang nhap
+// Tạo token và phiên đăng nhập
 
 const issueTokens = async (user) => {
   const session = new sessionModel({ userId: user._id })
@@ -18,13 +19,13 @@ const issueTokens = async (user) => {
   const { exp } = jwtUtils.decodeToken(refreshToken)
 
   session.tokenHash = hashToken(refreshToken)
-  session.expiresAt = new Date(exp * 1000)
+  session.expiresAt = new Date(exp * AUTH_LIMITS.JWT_EXP_SECONDS_TO_MS)
   await session.save()
 
   return { accessToken, refreshToken }
 }
 
-// Dang nhap
+// Đăng nhập
 const login = async ({ email, password }) => {
   const user = await userModel.findOne({ email })
   if (!user) {
@@ -39,7 +40,7 @@ const login = async ({ email, password }) => {
   return issueTokens(user)
 }
 
-// Lam moi refresh token
+// Làm mới refresh token
 const refreshToken = async (token) => {
   let payload
   try {
@@ -72,23 +73,23 @@ const refreshToken = async (token) => {
   const { exp } = jwtUtils.decodeToken(newRefreshToken)
 
   session.tokenHash = hashToken(newRefreshToken)
-  session.expiresAt = new Date(exp * 1000)
+  session.expiresAt = new Date(exp * AUTH_LIMITS.JWT_EXP_SECONDS_TO_MS)
   await session.save()
 
   return { accessToken, refreshToken: newRefreshToken }
 }
 
-// Dang xuat
+// Đăng xuất
 const logout = async (token) => {
   await sessionModel.deleteOne({ tokenHash: hashToken(token) })
 }
 
-// Dang xuat tat ca thiet bi
+// Đăng xuất tất cả thiết bị
 const logoutAll = async (userId) => {
   await sessionModel.deleteMany({ userId })
 }
 
-// Doi mat khau
+// Đổi mật khẩu
 const changePassword = async ({ userId, currentSessionId, oldPassword, newPassword, logoutOtherDevices }) => {
   const user = await userModel.findById(userId)
   if (!user) {
@@ -122,11 +123,7 @@ const changePassword = async ({ userId, currentSessionId, oldPassword, newPasswo
   }
 }
 
-const OTP_TTL_MS = 10 * 60 * 1000
-const RESEND_COOLDOWN_MS = 60 * 1000
-const MAX_RESENDS = 5
-
-// Gui OTP quen mat khau
+// Gửi OTP quên mật khẩu
 const forgotPassword = async ({ email }) => {
   const user = await userModel.findOne({ email })
   if (!user) return
@@ -134,20 +131,20 @@ const forgotPassword = async ({ email }) => {
   const existing = await passwordResetModel.findOne({ userId: user._id })
 
   if (existing && existing.expiresAt > new Date()) {
-    if (existing.lastSentAt && Date.now() - existing.lastSentAt.getTime() < RESEND_COOLDOWN_MS) {
+    if (existing.lastSentAt && Date.now() - existing.lastSentAt.getTime() < AUTH_LIMITS.RESEND_COOLDOWN_MS) {
       throw new ApiError(StatusCodes.TOO_MANY_REQUESTS, 'Vui long doi truoc khi gui lai OTP.')
     }
-    if (existing.sendCount >= MAX_RESENDS) {
+    if (existing.sendCount >= AUTH_LIMITS.MAX_RESENDS) {
       throw new ApiError(StatusCodes.TOO_MANY_REQUESTS, 'Ban da gui OTP qua nhieu lan. Vui long thu lai sau.')
     }
   }
 
-  const otp = crypto.randomInt(100000, 1000000).toString()
+  const otp = crypto.randomInt(AUTH_LIMITS.OTP_MIN, AUTH_LIMITS.OTP_MAX).toString()
 
   const update = {
     $set: {
       otpHash: hashToken(otp),
-      expiresAt: new Date(Date.now() + OTP_TTL_MS),
+      expiresAt: new Date(Date.now() + AUTH_LIMITS.FORGOT_PASSWORD_OTP_TTL_MS),
       lastSentAt: new Date(),
       attemptCount: 0
     }
@@ -159,14 +156,10 @@ const forgotPassword = async ({ email }) => {
     update.$setOnInsert = { sendCount: 1 }
   }
 
-  await passwordResetModel.findOneAndUpdate(
-    { userId: user._id },
-    update,
-    { upsert: true }
-  )
+  await passwordResetModel.findOneAndUpdate({ userId: user._id }, update, { upsert: true })
 
   try {
-    await emailQueue.add('reset-password', {
+    await emailQueue.add(EMAIL_JOB_NAME.RESET_PASSWORD, {
       email: user.email,
       displayName: user.displayName,
       otp
@@ -177,7 +170,7 @@ const forgotPassword = async ({ email }) => {
   }
 }
 
-// Dat lai mat khau bang OTP
+// Đặt lại mật khẩu bằng OTP
 const resetPassword = async ({ email, otp, newPassword }) => {
   const user = await userModel.findOne({ email })
   if (!user) {
@@ -189,7 +182,7 @@ const resetPassword = async ({ email, otp, newPassword }) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'OTP khong hop le hoac da het han.')
   }
 
-  if (record.attemptCount >= MAX_VERIFY_ATTEMPTS) {
+  if (record.attemptCount >= AUTH_LIMITS.MAX_VERIFY_ATTEMPTS) {
     await passwordResetModel.deleteOne({ _id: record._id })
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Ban da nhap sai OTP qua nhieu lan. Vui long yeu cau OTP moi.')
   }
@@ -213,12 +206,12 @@ const resetPassword = async ({ email, otp, newPassword }) => {
   await sessionModel.deleteMany({ userId: user._id })
 }
 
-// Gui lai OTP quen mat khau
+// Gửi lại OTP quên mật khẩu
 const resendForgotPasswordOtp = async ({ email }) => {
   const user = await userModel.findOne({ email })
   if (!user) return
 
-  const otp = crypto.randomInt(100000, 1000000).toString()
+  const otp = crypto.randomInt(AUTH_LIMITS.OTP_MIN, AUTH_LIMITS.OTP_MAX).toString()
   const now = Date.now()
 
   const updated = await passwordResetModel.findOneAndUpdate(
@@ -227,14 +220,14 @@ const resendForgotPasswordOtp = async ({ email }) => {
       expiresAt: { $gt: new Date() },
       $or: [
         { lastSentAt: { $exists: false } },
-        { lastSentAt: { $lte: new Date(now - RESEND_COOLDOWN_MS) } }
+        { lastSentAt: { $lte: new Date(now - AUTH_LIMITS.RESEND_COOLDOWN_MS) } }
       ],
-      sendCount: { $lt: MAX_RESENDS }
+      sendCount: { $lt: AUTH_LIMITS.MAX_RESENDS }
     },
     {
       $set: {
         otpHash: hashToken(otp),
-        expiresAt: new Date(now + OTP_TTL_MS),
+        expiresAt: new Date(now + AUTH_LIMITS.FORGOT_PASSWORD_OTP_TTL_MS),
         lastSentAt: new Date(now),
         attemptCount: 0
       },
@@ -248,14 +241,14 @@ const resendForgotPasswordOtp = async ({ email }) => {
     if (!record) {
       return forgotPassword({ email })
     }
-    if (record.sendCount >= MAX_RESENDS) {
+    if (record.sendCount >= AUTH_LIMITS.MAX_RESENDS) {
       throw new ApiError(StatusCodes.TOO_MANY_REQUESTS, 'Ban da gui lai OTP qua nhieu lan. Vui long thu lai sau.')
     }
     throw new ApiError(StatusCodes.TOO_MANY_REQUESTS, 'Vui long doi truoc khi gui lai OTP.')
   }
 
   try {
-    await emailQueue.add('reset-password', {
+    await emailQueue.add(EMAIL_JOB_NAME.RESET_PASSWORD, {
       email: user.email,
       displayName: user.displayName,
       otp
@@ -266,12 +259,17 @@ const resendForgotPasswordOtp = async ({ email }) => {
   }
 }
 
-// Tao mat khau Google
+// Tạo mật khẩu Google
 const generateGooglePassword = () => {
-  return 'google_' + crypto.randomBytes(32).toString('hex') + '_' + Date.now()
+  return (
+    GOOGLE_AUTH.PASSWORD_PREFIX +
+    crypto.randomBytes(GOOGLE_AUTH.PASSWORD_RANDOM_BYTES).toString(GOOGLE_AUTH.RANDOM_ENCODING) +
+    GOOGLE_AUTH.PASSWORD_SEPARATOR +
+    Date.now()
+  )
 }
 
-// Dang nhap Google
+// Đăng nhập Google
 const googleLogin = async (profile) => {
   if (!profile) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Xác thực Google thất bại.')
@@ -284,7 +282,7 @@ const googleLogin = async (profile) => {
   }
 
   const email = rawEmail.trim().toLowerCase()
-  const displayName = profile.displayName?.trim() || email.split('@')[0]
+  const displayName = profile.displayName?.trim() || email.split(GOOGLE_AUTH.PROFILE_EMAIL_SEPARATOR)[0]
   const avatarUrl = profile.photos?.[0]?.value || null
 
   let user = await userModel.findOne({ email })
@@ -301,7 +299,7 @@ const googleLogin = async (profile) => {
     })
 
     try {
-      await emailQueue.add('welcome', { email: user.email, displayName: user.displayName })
+      await emailQueue.add(EMAIL_JOB_NAME.WELCOME, { email: user.email, displayName: user.displayName })
     } catch (err) {
       logger.error(`Khong the day job email chao mung: ${err.message}`)
     }
@@ -310,14 +308,9 @@ const googleLogin = async (profile) => {
   return issueTokens(user)
 }
 
-const REGISTER_OTP_TTL_MS = 5 * 60 * 1000
-const REGISTER_RESEND_COOLDOWN_MS = 60 * 1000
-const REGISTER_MAX_RESENDS = 5
-const MAX_VERIFY_ATTEMPTS = 5
-
 const pushRegisterOtpEmail = async ({ email, displayName, otp }) => {
   try {
-    await emailQueue.add('register-otp', { email, displayName, otp })
+    await emailQueue.add(EMAIL_JOB_NAME.REGISTER_OTP, { email, displayName, otp })
   } catch (err) {
     logger.error(`Khong the day job email OTP dang ky: ${err.message}`)
   }
@@ -331,25 +324,25 @@ const requestRegisterOtp = async ({ email, password, displayName }) => {
 
   const pending = await pendingRegistrationModel.findOne({ email })
 
-  // Pending con hieu luc thi van ap dung cooldown va gioi han gui
+  // Pending còn hiệu lực thì vẫn áp dụng cooldown và giới hạn gửi
   if (pending && pending.expiresAt > new Date()) {
-    if (pending.lastSentAt && Date.now() - pending.lastSentAt.getTime() < REGISTER_RESEND_COOLDOWN_MS) {
+    if (pending.lastSentAt && Date.now() - pending.lastSentAt.getTime() < AUTH_LIMITS.RESEND_COOLDOWN_MS) {
       throw new ApiError(StatusCodes.TOO_MANY_REQUESTS, 'Vui long doi truoc khi gui lai OTP.')
     }
-    if (pending.sendCount >= REGISTER_MAX_RESENDS) {
+    if (pending.sendCount >= AUTH_LIMITS.MAX_RESENDS) {
       throw new ApiError(StatusCodes.TOO_MANY_REQUESTS, 'Ban da gui OTP qua nhieu lan. Vui long dang ky lai sau.')
     }
   }
 
   const passwordHash = await bcrypt.hash(password, envConfig.bcrypt.saltRounds)
-  const otp = crypto.randomInt(100000, 1000000).toString()
+  const otp = crypto.randomInt(AUTH_LIMITS.OTP_MIN, AUTH_LIMITS.OTP_MAX).toString()
 
   const update = {
     $set: {
       passwordHash,
       displayName,
       otpHash: hashToken(otp),
-      expiresAt: new Date(Date.now() + REGISTER_OTP_TTL_MS),
+      expiresAt: new Date(Date.now() + AUTH_LIMITS.REGISTER_OTP_TTL_MS),
       lastSentAt: new Date(),
       attemptCount: 0
     }
@@ -361,11 +354,7 @@ const requestRegisterOtp = async ({ email, password, displayName }) => {
     update.$setOnInsert = { sendCount: 1 }
   }
 
-  await pendingRegistrationModel.findOneAndUpdate(
-    { email },
-    update,
-    { upsert: true, new: true }
-  )
+  await pendingRegistrationModel.findOneAndUpdate({ email }, update, { upsert: true, new: true })
 
   try {
     await pushRegisterOtpEmail({ email, displayName, otp })
@@ -373,10 +362,10 @@ const requestRegisterOtp = async ({ email, password, displayName }) => {
     throw new ApiError(StatusCodes.SERVICE_UNAVAILABLE, 'Khong the gui email. Vui long thu lai.')
   }
 
-  return { email, expiresIn: REGISTER_OTP_TTL_MS / 1000 }
+  return { email, expiresIn: AUTH_LIMITS.REGISTER_OTP_EXPIRES_IN_SECONDS }
 }
 
-// Xac thuc OTP va tao tai khoan
+// Xác thực OTP và tạo tài khoản
 const verifyRegisterOtp = async ({ email, otp }) => {
   const pending = await pendingRegistrationModel.findOne({ email })
   if (!pending || pending.expiresAt < new Date()) {
@@ -384,7 +373,7 @@ const verifyRegisterOtp = async ({ email, otp }) => {
   }
 
   // Chặn brute-force: quá số lần nhập sai thì hủy pending, bắt đăng ký lại
-  if (pending.attemptCount >= MAX_VERIFY_ATTEMPTS) {
+  if (pending.attemptCount >= AUTH_LIMITS.MAX_VERIFY_ATTEMPTS) {
     await pendingRegistrationModel.deleteOne({ _id: pending._id })
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Ban da nhap sai OTP qua nhieu lan. Vui long dang ky lai.')
   }
@@ -412,7 +401,7 @@ const verifyRegisterOtp = async ({ email, otp }) => {
   await pendingRegistrationModel.deleteOne({ _id: pending._id })
 
   try {
-    await emailQueue.add('welcome', { email: user.email, displayName: user.displayName })
+    await emailQueue.add(EMAIL_JOB_NAME.WELCOME, { email: user.email, displayName: user.displayName })
   } catch (err) {
     logger.error(`Khong the day job email chao mung: ${err.message}`)
   }
@@ -421,14 +410,14 @@ const verifyRegisterOtp = async ({ email, otp }) => {
   return issueTokens(user)
 }
 
-// Gui lai OTP dang ky
+// Gửi lại OTP đăng ký
 const resendRegisterOtp = async ({ email }) => {
   const existing = await userModel.findOne({ email })
   if (existing) {
     throw new ApiError(StatusCodes.CONFLICT, 'Email đã tồn tại.')
   }
 
-  const otp = crypto.randomInt(100000, 1000000).toString()
+  const otp = crypto.randomInt(AUTH_LIMITS.OTP_MIN, AUTH_LIMITS.OTP_MAX).toString()
   const now = Date.now()
 
   const updated = await pendingRegistrationModel.findOneAndUpdate(
@@ -437,14 +426,14 @@ const resendRegisterOtp = async ({ email }) => {
       expiresAt: { $gt: new Date() },
       $or: [
         { lastSentAt: { $exists: false } },
-        { lastSentAt: { $lte: new Date(now - REGISTER_RESEND_COOLDOWN_MS) } }
+        { lastSentAt: { $lte: new Date(now - AUTH_LIMITS.RESEND_COOLDOWN_MS) } }
       ],
-      sendCount: { $lt: REGISTER_MAX_RESENDS }
+      sendCount: { $lt: AUTH_LIMITS.MAX_RESENDS }
     },
     {
       $set: {
         otpHash: hashToken(otp),
-        expiresAt: new Date(now + REGISTER_OTP_TTL_MS),
+        expiresAt: new Date(now + AUTH_LIMITS.REGISTER_OTP_TTL_MS),
         lastSentAt: new Date(now),
         attemptCount: 0
       },
@@ -458,7 +447,7 @@ const resendRegisterOtp = async ({ email }) => {
     if (!pending) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'Khong co yeu cau dang ky dang cho xac thuc.')
     }
-    if (pending.sendCount >= REGISTER_MAX_RESENDS) {
+    if (pending.sendCount >= AUTH_LIMITS.MAX_RESENDS) {
       throw new ApiError(StatusCodes.TOO_MANY_REQUESTS, 'Ban da gui lai OTP qua nhieu lan. Vui long dang ky lai.')
     }
     throw new ApiError(StatusCodes.TOO_MANY_REQUESTS, 'Vui long doi truoc khi gui lai OTP.')
@@ -470,7 +459,7 @@ const resendRegisterOtp = async ({ email }) => {
     throw new ApiError(StatusCodes.SERVICE_UNAVAILABLE, 'Khong the gui email. Vui long thu lai.')
   }
 
-  return { email, expiresIn: REGISTER_OTP_TTL_MS / 1000 }
+  return { email, expiresIn: AUTH_LIMITS.REGISTER_OTP_EXPIRES_IN_SECONDS }
 }
 
 export default {
