@@ -1,15 +1,17 @@
 import dotenv from 'dotenv'
+
+import { ENV_DEFAULTS, NUMBER_PARSE_RADIX } from '../constants/index.js'
 dotenv.config()
 
 const env = {
   server: {
-    nodeEnv: process.env.NODE_ENV || 'development',
-    host: process.env.HOST || 'localhost',
-    port: process.env.PORT || 3000,
-    clientUrl: process.env.CLIENT_URL || 'http://localhost:5173'
+    nodeEnv: process.env.NODE_ENV || ENV_DEFAULTS.NODE_ENV,
+    host: process.env.HOST || ENV_DEFAULTS.HOST,
+    port: process.env.PORT || ENV_DEFAULTS.PORT,
+    clientUrl: process.env.CLIENT_URL || ENV_DEFAULTS.CLIENT_URL
   },
   bcrypt: {
-    saltRounds: parseInt(process.env.SALT_ROUNDS, 10) || 10
+    saltRounds: parseInt(process.env.SALT_ROUNDS, NUMBER_PARSE_RADIX) || ENV_DEFAULTS.BCRYPT_SALT_ROUNDS
   },
   jwt: {
     secretLogin: process.env.JWT_SECRET_LOGIN,
@@ -28,7 +30,7 @@ const env = {
   },
   redis: {
     host: process.env.REDIS_HOST,
-    port: parseInt(process.env.REDIS_PORT, 10) || 6379,
+    port: parseInt(process.env.REDIS_PORT, NUMBER_PARSE_RADIX) || ENV_DEFAULTS.REDIS_PORT,
     username: process.env.REDIS_USERNAME,
     password: process.env.REDIS_PASSWORD
   },
@@ -43,7 +45,7 @@ const env = {
     apiSecret: process.env.API_SECRET
   },
   mongo: {
-    uri: process.env.MONGO_URI || 'mongodb://localhost:27017/mydatabase'
+    uri: process.env.MONGO_URI || ENV_DEFAULTS.MONGO_URI
   }
 }
 
