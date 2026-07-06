@@ -6,6 +6,7 @@ import flashcardController from './flashcard.controller.js'
 import quizController from './quiz.controller.js'
 import learnController from './learn.controller.js'
 import studyController from './study.controller.js'
+import learnSessionController from './learnSession.controller.js'
 
 export {
   userController,
@@ -15,5 +16,6 @@ export {
   flashcardController,
   quizController,
   learnController,
-  studyController
+  studyController,
+  learnSessionController
 }
