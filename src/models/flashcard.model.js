@@ -1,5 +1,7 @@
 import mongoose, { model } from 'mongoose'
 
+import { FLASHCARD_SOURCE, FLASHCARD_SOURCES, FLASHCARD_TYPE, FLASHCARD_TYPES } from '../constants/index.js'
+
 const flashcardSchema = new mongoose.Schema(
   {
     deckId: {
@@ -15,6 +17,15 @@ const flashcardSchema = new mongoose.Schema(
       type: String,
       required: true
     },
+    stem: {
+      type: String,
+      default: ''
+    },
+    cardType: {
+      type: String,
+      enum: FLASHCARD_TYPES,
+      default: FLASHCARD_TYPE.BASIC
+    },
     distractors: {
       type: [String],
       default: []
@@ -25,13 +36,15 @@ const flashcardSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: ['manual', 'import', 'copy'],
-      default: 'manual'
+      enum: FLASHCARD_SOURCES,
+      default: FLASHCARD_SOURCE.MANUAL
     }
   },
   {
     timestamps: true
   }
 )
+
+flashcardSchema.index({ deckId: 1, sortOrder: 1 })
 
 export default model('Flashcard', flashcardSchema)

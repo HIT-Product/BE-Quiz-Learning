@@ -11,6 +11,12 @@ flashcardRouter.use(authMiddleware)
 flashcardRouter.get('/', flashcardController.list)
 flashcardRouter.post('/', validateMiddleware(flashcardValidation.create), flashcardController.create)
 flashcardRouter.put('/reorder', validateMiddleware(flashcardValidation.reorder), flashcardController.reorder)
+flashcardRouter.post(
+  '/import/preview',
+  validateMiddleware(flashcardValidation.previewImport),
+  flashcardController.previewImport
+)
+flashcardRouter.post('/import', validateMiddleware(flashcardValidation.importCards), flashcardController.importCards)
 flashcardRouter.put('/:cardId', validateMiddleware(flashcardValidation.update), flashcardController.update)
 flashcardRouter.delete('/:cardId', flashcardController.remove)
 

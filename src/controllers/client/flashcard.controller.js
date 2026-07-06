@@ -33,4 +33,22 @@ const reorder = catchAsync(async (req, res) => {
   res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Sắp xếp lại thẻ thành công.', cards))
 })
 
-export default { list, create, update, remove, reorder }
+// [POST] /decks/:deckId/cards/import/preview
+const previewImport = catchAsync(async (req, res) => {
+  const result = await flashcardService.previewImport(
+    req.params.deckId,
+    req.user._id,
+    req.body.rawText,
+    req.body.options
+  )
+  res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Phan tich file thanh cong.', result))
+})
+
+// [POST] /decks/:deckId/cards/import
+const importCards = catchAsync(async (req, res) => {
+  const result = await flashcardService.importCards(req.params.deckId, req.user._id, req.body)
+  const message = req.body.dryRun ? 'Xem truoc import.' : 'Import the thanh cong.'
+  res.status(StatusCodes.OK).json(response(StatusCodes.OK, message, result))
+})
+
+export default { list, create, update, remove, reorder, previewImport, importCards }
