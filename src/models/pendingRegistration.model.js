@@ -45,7 +45,7 @@ const pendingRegistrationSchema = new mongoose.Schema(
   }
 )
 
-// TTL index: Mongo tu xoa pending khi qua expiresAt
+// TTL index: Mongo tự xoá pending khi quá expiresAt
 pendingRegistrationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 })
 
 export default model('PendingRegistration', pendingRegistrationSchema)

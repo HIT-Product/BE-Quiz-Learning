@@ -1,10 +1,12 @@
 import Joi from 'joi'
 
+import { USER_LIMITS } from '../../constants/index.js'
+
 const updateProfile = {
   body: Joi.object({
-    displayName: Joi.string().trim().max(120),
+    displayName: Joi.string().trim().max(USER_LIMITS.DISPLAY_NAME_MAX_LENGTH),
     avatarUrl: Joi.string().uri().allow(null, ''),
-    defaultQuizSize: Joi.number().integer().min(1).max(100)
+    defaultQuizSize: Joi.number().integer().min(USER_LIMITS.QUIZ_SIZE_MIN).max(USER_LIMITS.QUIZ_SIZE_MAX)
   }).min(1)
 }
 

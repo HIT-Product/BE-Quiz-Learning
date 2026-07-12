@@ -8,6 +8,7 @@ import deckCopyLogModel from './deckCopyLog.model.js'
 import quizAttemptModel from './quizAttempt.model.js'
 import cardProgressModel from './cardProgress.model.js'
 import pendingRegistrationModel from './pendingRegistration.model.js'
+import learnSessionModel from './learnSession.model.js'
 
 export {
   userModel,
@@ -19,5 +20,6 @@ export {
   deckCopyLogModel,
   quizAttemptModel,
   cardProgressModel,
-  pendingRegistrationModel
+  pendingRegistrationModel,
+  learnSessionModel
 }

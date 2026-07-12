@@ -33,7 +33,7 @@ const passwordResetSchema = new mongoose.Schema(
   }
 )
 
-// TTL index: Mongo tu xoa ban ghi khi qua expiresAt
+// TTL index: Mongo tự xoá bản ghi khi quá expiresAt
 passwordResetSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 })
 
 export default model('PasswordReset', passwordResetSchema)

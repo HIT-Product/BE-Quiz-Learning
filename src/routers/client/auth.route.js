@@ -1,16 +1,25 @@
 import { Router } from 'express'
 
 import { passport } from '../../configs/index.js'
+import { GOOGLE_AUTH } from '../../constants/index.js'
 import { authValidation } from '../../validations/client/index.js'
 import { authController } from '../../controllers/client/index.js'
 import { validateMiddleware, authMiddleware } from '../../middlewares/index.js'
 
 const authRouter = Router()
 
-// Dang ky bang OTP: gui thong tin, xac thuc ma roi moi tao account
+// Đăng ký bằng OTP: gửi thông tin, xác thực mã rồi mới tạo account
 authRouter.post('/register', validateMiddleware(authValidation.requestRegisterOtp), authController.requestRegisterOtp)
-authRouter.post('/register/verify-otp', validateMiddleware(authValidation.verifyRegisterOtp), authController.verifyRegisterOtp)
-authRouter.post('/register/resend-otp', validateMiddleware(authValidation.resendRegisterOtp), authController.resendRegisterOtp)
+authRouter.post(
+  '/register/verify-otp',
+  validateMiddleware(authValidation.verifyRegisterOtp),
+  authController.verifyRegisterOtp
+)
+authRouter.post(
+  '/register/resend-otp',
+  validateMiddleware(authValidation.resendRegisterOtp),
+  authController.resendRegisterOtp
+)
 authRouter.post('/login', validateMiddleware(authValidation.login), authController.login)
 
 authRouter.post('/refresh-token', authController.refreshToken)
@@ -31,11 +40,16 @@ authRouter.post(
 )
 authRouter.post('/reset-password', validateMiddleware(authValidation.resetPassword), authController.resetPassword)
 
-authRouter.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false }))
+authRouter.get(
+  '/google',
+  passport.authenticate('google', { scope: GOOGLE_AUTH.GOOGLE_SCOPES, session: GOOGLE_AUTH.SESSION_DISABLED })
+)
 
-const googleCallbackHandlers = [passport.authenticate('google', { session: false }), authController.googleCallback]
+const googleCallbackHandlers = [
+  passport.authenticate('google', { session: GOOGLE_AUTH.SESSION_DISABLED }),
+  authController.googleCallback
+]
 
 authRouter.get('/google-callback', ...googleCallbackHandlers)
-
 
 export default authRouter
