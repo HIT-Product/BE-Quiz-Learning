@@ -2,6 +2,7 @@ import { Queue } from 'bullmq'
 import Redis from 'ioredis'
 
 import { envConfig } from '../configs/index.js'
+import { EMAIL_QUEUE_OPTIONS, QUEUE_BACKOFF_TYPE, QUEUE_NAME } from '../constants/index.js'
 
 const connection = new Redis({
   host: envConfig.redis.host,
@@ -11,15 +12,15 @@ const connection = new Redis({
   maxRetriesPerRequest: null
 })
 
-const emailQueue = new Queue('email', {
+const emailQueue = new Queue(QUEUE_NAME.EMAIL, {
   connection,
   defaultJobOptions: {
-    attempts: 3,
+    attempts: EMAIL_QUEUE_OPTIONS.ATTEMPTS,
     backoff: {
-      type: 'exponential',
-      delay: 1000
+      type: QUEUE_BACKOFF_TYPE.EXPONENTIAL,
+      delay: EMAIL_QUEUE_OPTIONS.BACKOFF_DELAY
     },
-    removeOnComplete: true
+    removeOnComplete: EMAIL_QUEUE_OPTIONS.REMOVE_ON_COMPLETE
   }
 })
 

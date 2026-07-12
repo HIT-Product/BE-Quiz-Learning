@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import { userModel } from '../../models/index.js'
 import { ApiError } from '../../utils/index.js'
 
-// Lay ho so ca nhan
+// Lấy hồ sơ cá nhân
 const getProfile = async (userId) => {
   const user = await userModel.findById(userId).select('-passwordHash')
   if (!user) {
@@ -11,7 +11,7 @@ const getProfile = async (userId) => {
   return user
 }
 
-// Cap nhat ho so ca nhan
+// Cập nhật hồ sơ cá nhân
 const updateProfile = async (userId, updateData) => {
   const allowedFields = ['displayName', 'avatarUrl', 'defaultQuizSize']
   const updateFields = {}

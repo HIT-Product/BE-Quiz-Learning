@@ -1,5 +1,7 @@
 import mongoose, { model } from 'mongoose'
 
+import { USER_LIMITS } from '../constants/index.js'
+
 const userSchema = new mongoose.Schema(
   {
     email: {
@@ -17,7 +19,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      maxlength: 120
+      maxlength: USER_LIMITS.DISPLAY_NAME_MAX_LENGTH
     },
     avatarUrl: {
       type: String,
@@ -25,7 +27,7 @@ const userSchema = new mongoose.Schema(
     },
     defaultQuizSize: {
       type: Number,
-      default: 10
+      default: USER_LIMITS.DEFAULT_QUIZ_SIZE
     }
   },
   {

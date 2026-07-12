@@ -1,5 +1,7 @@
 import mongoose, { model } from 'mongoose'
 
+import { LEARNING_STATUS, LEARNING_STATUSES } from '../constants/index.js'
+
 const cardProgressSchema = new mongoose.Schema(
   {
     userId: {
@@ -14,8 +16,8 @@ const cardProgressSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['new', 'learning', 'remembered'],
-      default: 'new'
+      enum: LEARNING_STATUSES,
+      default: LEARNING_STATUS.NEW
     },
     reviewCount: {
       type: Number,
