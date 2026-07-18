@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@socket.io/redis-adapter": "^8.3.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.79.0",
     "cookie-parser": "^1.4.7",
@@ -10,12 +11,15 @@
     "ioredis": "^5.11.1",
     "joi": "^18.2.3",
     "jsonwebtoken": "^9.0.3",
+    "livekit-server-sdk": "^2.17.0",
     "mongoose": "^9.7.1",
     "morgan": "^1.11.0",
+    "nanoid": "^5.1.16",
     "nodemailer": "^9.0.1",
     "papaparse": "^5.5.4",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
+    "socket.io": "^4.8.3",
     "winston": "^3.19.0"
   },
   "name": "be-quiz-learning",

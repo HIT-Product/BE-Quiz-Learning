@@ -8,13 +8,26 @@ import cookieParser from 'cookie-parser'
 import { StatusCodes } from 'http-status-codes'
 
 import './configs/google.config.js'
-import { APP_LIMITS, APP_PATH, APP_TRUST_PROXY, APP_VIEW } from './constants/index.js'
+import { initSocket } from './sockets/index.js'
+import { roomMaintenanceQueue } from './queues/index.js'
+import { createRoomMaintenanceWorker } from './workers/roomMaintenance.worker.js'
+import { createPomodoroWorker } from './workers/pomodoro.worker.js'
+import {
+  APP_LIMITS,
+  APP_PATH,
+  APP_TRUST_PROXY,
+  APP_VIEW,
+  ROOM_MAINTENANCE_JOB_NAME,
+  ROOM_MAINTENANCE_QUEUE_OPTIONS,
+  ROOM_MAINTENANCE_SCHEDULER_ID
+} from './constants/index.js'
 import router from './routers/index.js'
 import { logger, response } from './utils/index.js'
 import { envConfig, connectDB, passport } from './configs/index.js'
 import { errorMiddleware, morganMiddleware } from './middlewares/index.js'
 
 const app = express()
+const httpServer = http.createServer(app)
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -26,13 +39,13 @@ app.use(express.static(path.join(__dirname, '..', APP_PATH.PUBLIC_DIR)))
 
 app.use(
   cors({
-    origin: envConfig.server.clientUrl || 'http://localhost:3000',
+    origin: envConfig.server.nodeEnv === 'development' ? true : envConfig.server.clientUrl,
     credentials: true
   })
 )
 
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+app.use(express.json({ limit: APP_LIMITS.BODY_SIZE }))
+app.use(express.urlencoded({ extended: true, limit: APP_LIMITS.BODY_SIZE }))
 app.use(cookieParser())
 app.use(passport.initialize())
 
@@ -51,18 +64,30 @@ app.get(APP_PATH.ROOT, (req, res) => {
 })
 
 app.all(/(.*)/, (req, res) => {
-  res.status(StatusCodes.NOT_FOUND).json(response(StatusCodes.NOT_FOUND, 'Không tìm thấy tài nguyên.'))
+  res.status(StatusCodes.NOT_FOUND).json(response(StatusCodes.NOT_FOUND, 'Khong tim thay tai nguyen.'))
 })
 
 app.use(errorMiddleware.errorConverter)
 app.use(errorMiddleware.errorHandler)
 
-app.use(express.json({ limit: APP_LIMITS.BODY_SIZE }))
-app.use(express.urlencoded({ extended: true, limit: APP_LIMITS.BODY_SIZE }))
-
 connectDB()
-  .then(() => {
-    app.listen(envConfig.server.port, () => {
+  .then(async () => {
+    const io = initSocket(httpServer)
+    const nsp = io.of('/study-rooms')
+
+    await roomMaintenanceQueue.upsertJobScheduler(
+      ROOM_MAINTENANCE_SCHEDULER_ID.CLOSE_IDLE_ROOMS,
+      { every: ROOM_MAINTENANCE_QUEUE_OPTIONS.CLOSE_IDLE_EVERY_MS },
+      {
+        name: ROOM_MAINTENANCE_JOB_NAME.CLOSE_IDLE_ROOMS,
+        data: {},
+        opts: { removeOnComplete: true }
+      }
+    )
+    createRoomMaintenanceWorker(nsp)
+    createPomodoroWorker(nsp)
+
+    httpServer.listen(envConfig.server.port, () => {
       logger.info(`Server is running on ${envConfig.server.host}:${envConfig.server.port}`)
     })
   })

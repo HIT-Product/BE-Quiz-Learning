@@ -14,7 +14,11 @@ learnRouter.post('/answer', validateMiddleware(learnValidation.answer), learnCon
 learnRouter.post('/session', validateMiddleware(learnSessionValidation.start), learnSessionController.start)
 learnRouter.get('/session', validateMiddleware(learnSessionValidation.current), learnSessionController.current)
 learnRouter.post('/session/answer', validateMiddleware(learnSessionValidation.answer), learnSessionController.answer)
-learnRouter.post('/session/override', validateMiddleware(learnSessionValidation.override), learnSessionController.override)
+learnRouter.post(
+  '/session/override',
+  validateMiddleware(learnSessionValidation.override),
+  learnSessionController.override
+)
 learnRouter.post('/session/reset', validateMiddleware(learnSessionValidation.reset), learnSessionController.reset)
 
 export default learnRouter

@@ -9,6 +9,10 @@ import quizAttemptModel from './quizAttempt.model.js'
 import cardProgressModel from './cardProgress.model.js'
 import pendingRegistrationModel from './pendingRegistration.model.js'
 import learnSessionModel from './learnSession.model.js'
+import studyRoomModel from './studyRoom.model.js'
+import roomMessageModel from './roomMessage.model.js'
+import roomParticipantModel from './roomParticipant.model.js'
+import pomodoroSessionModel from './pomodoroSession.model.js'
 
 export {
   userModel,
@@ -21,5 +25,9 @@ export {
   quizAttemptModel,
   cardProgressModel,
   pendingRegistrationModel,
-  learnSessionModel
+  learnSessionModel,
+  studyRoomModel,
+  roomMessageModel,
+  roomParticipantModel,
+  pomodoroSessionModel
 }

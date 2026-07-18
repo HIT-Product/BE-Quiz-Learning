@@ -15,17 +15,17 @@ const normalize = (text) =>
     .replace(/\s+/g, ' ')
     .replace(/[.,;:!?]+$/g, '')
 
-// Bỏ tiền tố lựa chọn dạng "A. ", "1) ", "b - "... ở đầu chuỗi
+// Bỏ prefix đáp án.
 const OPTION_PREFIX = /^\s*(?:[A-Za-z]|\d{1,2})\s*[.)\:-]\s+/
 const stripOptionPrefix = (text) =>
   String(text ?? '')
     .replace(OPTION_PREFIX, '')
     .trim()
 
-// So khớp đáp án "lỏng": bỏ prefix và normalize cả hai vế
+// So khớp sau khi chuẩn hóa.
 const matchAnswer = (a, b) => normalize(stripOptionPrefix(a)) === normalize(stripOptionPrefix(b))
 
-// Bỏ dấu tiếng Việt
+// Bỏ dấu tiếng Việt.
 const stripAccents = (s) =>
   String(s ?? '')
     .normalize('NFD')
@@ -33,7 +33,7 @@ const stripAccents = (s) =>
     .replace(/đ/g, 'd')
     .replace(/Đ/g, 'D')
 
-// Khoảng cách Levenshtein
+// Khoảng cách Levenshtein.
 const levenshtein = (a, b) => {
   a = String(a ?? '')
   b = String(b ?? '')
@@ -54,10 +54,10 @@ const levenshtein = (a, b) => {
   return prev[n]
 }
 
-// Chấm "gần đúng" với 3 mức:
-//   strict   - luôn false (chỉ dùng matchAnswer)
-//   moderate - Levenshtein <= 15% độ dài, giữ dấu
-//   loose    - bỏ dấu tiếng Việt + Levenshtein <= 25% độ dài
+// Ngưỡng chấm gần đúng:
+//   strict: chỉ khớp chính xác.
+//   moderate: sai lệch tối đa 15%.
+//   loose: bỏ dấu, sai lệch tối đa 25%.
 const isCloseAnswer = (input, answer, { mode = 'moderate', maxLen = 64 } = {}) => {
   if (mode === 'strict') return false
 

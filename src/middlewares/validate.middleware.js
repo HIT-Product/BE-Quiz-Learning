@@ -1,20 +1,23 @@
 import { StatusCodes } from 'http-status-codes'
+
 import { response } from '../utils/index.js'
 
 const validate = (schema) => (req, res, next) => {
   for (const key in schema) {
-    const value = req[key]
-
-    const { error } = schema[key].validate(value, {
-      abortEarly: false
+    const { value, error } = schema[key].validate(req[key], {
+      abortEarly: false,
+      stripUnknown: true
     })
 
     if (error) {
-      const { details } = error
-
-      const messages = details.map((detail) => detail.message).join(',')
-
+      const messages = error.details.map((detail) => detail.message).join(',')
       return res.status(StatusCodes.BAD_REQUEST).json(response(StatusCodes.BAD_REQUEST, messages))
+    }
+
+    if (key === 'query') {
+      req.validatedQuery = value
+    } else {
+      req[key] = value
     }
   }
 

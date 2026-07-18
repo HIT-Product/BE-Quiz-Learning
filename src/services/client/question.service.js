@@ -16,11 +16,7 @@ const buildMultipleChoice = (card, allCards) => {
   const need = QUESTION_LIMITS.MULTIPLE_CHOICE_OPTION_COUNT - 1 - own.length
   const filler =
     need > 0
-      ? pick(
-        allCards
-          .filter((c) => c._id.toString() !== card._id.toString())
-          .map((c) => c.back)
-      ).slice(0, need)
+      ? pick(allCards.filter((c) => c._id.toString() !== card._id.toString()).map((c) => c.back)).slice(0, need)
       : []
 
   const distractors = [...own, ...filler].slice(0, QUESTION_LIMITS.MULTIPLE_CHOICE_OPTION_COUNT - 1)
