@@ -29,11 +29,6 @@ const list = async (ownerId, { folderId } = {}) => {
   return deckModel.find(filter).sort({ createdAt: -1 })
 }
 
-// Lấy danh sách deck public
-const listPublic = async () => {
-  return deckModel.find({ visibility: DECK_VISIBILITY.PUBLIC }).sort({ createdAt: -1 })
-}
-
 // Lấy chi tiết deck
 const getById = async (deckId, userId) => {
   const deck = await deckModel.findById(deckId)
