@@ -44,6 +44,11 @@ const env = {
     apiKey: process.env.API_KEY,
     apiSecret: process.env.API_SECRET
   },
+  livekit: {
+    url: process.env.LIVEKIT_URL,
+    apiKey: process.env.LIVEKIT_API_KEY,
+    apiSecret: process.env.LIVEKIT_API_SECRET
+  },
   mongo: {
     uri: process.env.MONGO_URI || ENV_DEFAULTS.MONGO_URI
   }
