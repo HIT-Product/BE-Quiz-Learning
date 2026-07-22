@@ -1,11 +1,15 @@
 import Joi from 'joi'
-import { ROOM_LIMITS } from '../../constants/index.js'
+
+import { ROOM_LIMITS, ROOM_VISIBILITY } from '../../constants/index.js'
 
 const objectId = Joi.string().hex().length(24)
 
 const create = {
   body: Joi.object({
     title: Joi.string().trim().min(1).max(ROOM_LIMITS.TITLE_MAX).required(),
+    visibility: Joi.string()
+      .valid(...Object.values(ROOM_VISIBILITY))
+      .default(ROOM_VISIBILITY.PRIVATE),
     pomodoroWorkMin: Joi.number().integer().min(ROOM_LIMITS.WORK_MIN).max(ROOM_LIMITS.WORK_MAX).default(25),
     pomodoroBreakMin: Joi.number().integer().min(ROOM_LIMITS.BREAK_MIN).max(ROOM_LIMITS.BREAK_MAX).default(5),
     maxParticipants: Joi.number()
@@ -18,8 +22,9 @@ const create = {
       leaderboardEnabled: Joi.boolean(),
       cameraAllowed: Joi.boolean(),
       micAllowed: Joi.boolean(),
+      screenShareAllowed: Joi.boolean(),
       micLocked: Joi.boolean()
-    })
+    }).default({})
   })
 }
 

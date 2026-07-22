@@ -4,6 +4,7 @@ import { createRedisClient, redisClient } from '../configs/index.js'
 import { pomodoroSessionModel, studyRoomModel } from '../models/index.js'
 import { pomodoroQueue } from '../queues/index.js'
 import { roomRealtimeService } from '../sockets/services/index.js'
+import { serializePomodoroState } from '../sockets/contracts/pomodoro.contract.js'
 import { logger } from '../utils/index.js'
 import {
   POMODORO_JOB_NAME,
@@ -45,30 +46,34 @@ const handlePhaseEnd = async (nsp, { roomId, expectedCycle, expectedPhase }) => 
       { roomId, expectedCycle, expectedPhase: POMODORO_PHASE.BREAK },
       {
         delay: durationSec * 1000,
-        jobId: `pomo:${roomId}:${expectedCycle}:break`,
+        jobId: `pomo-${roomId}-${expectedCycle}-break`,
         removeOnComplete: true
       }
     )
 
-    nsp.to(`room:${roomId}`).emit('pomodoro:phase-changed', {
-      phase: POMODORO_PHASE.BREAK,
-      startedAt,
-      durationSec,
-      cycle: expectedCycle,
-      serverNow: Date.now()
-    })
+    nsp.to(`room:${roomId}`).emit(
+      'pomodoro:phase-changed',
+      serializePomodoroState({
+        status: POMODORO_STATUS.RUNNING,
+        phase: POMODORO_PHASE.BREAK,
+        startedAt,
+        durationSec,
+        cycle: expectedCycle
+      })
+    )
 
     return { skipped: false, nextPhase: POMODORO_PHASE.BREAK }
   }
 
   await redisClient.hset(key, { status: POMODORO_STATUS.IDLE })
   await redisClient.hdel(key, 'phase', 'startedAt', 'durationSec', 'remainingSec')
-  nsp.to(`room:${roomId}`).emit('pomodoro:phase-changed', {
-    phase: null,
-    status: POMODORO_STATUS.IDLE,
-    cycle: expectedCycle,
-    serverNow: Date.now()
-  })
+  nsp.to(`room:${roomId}`).emit(
+    'pomodoro:phase-changed',
+    serializePomodoroState({
+      status: POMODORO_STATUS.IDLE,
+      cycle: expectedCycle
+    })
+  )
 
   return { skipped: false, nextPhase: null }
 }

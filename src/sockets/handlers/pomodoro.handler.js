@@ -4,6 +4,7 @@ import { pomodoroQueue } from '../../queues/index.js'
 import { redisClient } from '../../configs/index.js'
 import { studyRoomModel, pomodoroSessionModel } from '../../models/index.js'
 import { roomRealtimeService, roomSessionService } from '../services/index.js'
+import { serializePomodoroState } from '../contracts/pomodoro.contract.js'
 import { safeHandler, socketError } from '../utils/socketHandler.js'
 import {
   POMODORO_JOB_NAME,
@@ -42,7 +43,7 @@ const withPomodoroLock = async (roomId, handler) => {
   }
 }
 
-const phaseJobId = (roomId, cycle, phase) => `pomo:${roomId}:${cycle}:${phase}`
+const phaseJobId = (roomId, cycle, phase) => `pomo-${roomId}-${cycle}-${phase}`
 
 const removePhaseJob = async (roomId, cycle, phase) => {
   if (!cycle || !phase) return
@@ -104,7 +105,13 @@ const registerPomodoroHandlers = (nsp, socket) => {
         )
 
         await addPhaseEndJob(roomId, cycle, POMODORO_PHASE.WORK, durationSec)
-        return { phase: POMODORO_PHASE.WORK, startedAt, durationSec, cycle, serverNow: Date.now() }
+        return serializePomodoroState({
+          status: POMODORO_STATUS.RUNNING,
+          phase: POMODORO_PHASE.WORK,
+          startedAt,
+          durationSec,
+          cycle
+        })
       })
 
       nsp.to(`room:${roomId}`).emit('pomodoro:started', result)
@@ -132,7 +139,11 @@ const registerPomodoroHandlers = (nsp, socket) => {
           await roomRealtimeService.settleAllStudyTime(roomId)
         }
 
-        return { remainingSec, phase: pomo.phase, cycle: Number(pomo.cycle), serverNow: Date.now() }
+        return serializePomodoroState({
+          ...pomo,
+          status: POMODORO_STATUS.PAUSED,
+          remainingSec
+        })
       })
 
       nsp.to(`room:${roomId}`).emit('pomodoro:paused', result)
@@ -171,7 +182,12 @@ const registerPomodoroHandlers = (nsp, socket) => {
         }
 
         await addPhaseEndJob(roomId, pomo.cycle, pomo.phase, durationSec)
-        return { phase: pomo.phase, startedAt, durationSec, cycle: Number(pomo.cycle), serverNow: Date.now() }
+        return serializePomodoroState({
+          ...pomo,
+          status: POMODORO_STATUS.RUNNING,
+          startedAt,
+          durationSec
+        })
       })
 
       nsp.to(`room:${roomId}`).emit('pomodoro:resumed', result)
@@ -202,7 +218,7 @@ const registerPomodoroHandlers = (nsp, socket) => {
         await redisClient.del(key)
       })
 
-      const result = { serverNow: Date.now() }
+      const result = serializePomodoroState()
       nsp.to(`room:${roomId}`).emit('pomodoro:reset', result)
       return result
     })

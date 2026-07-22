@@ -1,5 +1,25 @@
 import mongoose, { model } from 'mongoose'
-import { ROOM_VISIBILITY, ROOM_STATUS, ROOM_LIMITS } from '../constants/index.js'
+
+import { POMODORO_PHASE, POMODORO_STATUS, ROOM_LIMITS, ROOM_STATUS, ROOM_VISIBILITY } from '../constants/index.js'
+
+const pomodoroStateSchema = new mongoose.Schema(
+  {
+    status: {
+      type: String,
+      enum: Object.values(POMODORO_STATUS),
+      default: POMODORO_STATUS.IDLE
+    },
+    phase: {
+      type: String,
+      enum: [...Object.values(POMODORO_PHASE), null],
+      default: null
+    },
+    endsAt: { type: Date, default: null },
+    remainingSec: { type: Number, min: 0, default: null },
+    version: { type: Number, min: 0, default: 0 }
+  },
+  { _id: false }
+)
 
 const studyRoomSchema = new mongoose.Schema(
   {
@@ -49,38 +69,25 @@ const studyRoomSchema = new mongoose.Schema(
       default: ROOM_STATUS.OPEN,
       index: true
     },
-    closedAt: {
-      type: Date,
-      default: null
+    closedAt: { type: Date, default: null },
+    emptySince: { type: Date, default: null },
+    pomodoro: {
+      type: pomodoroStateSchema,
+      default: () => ({})
     },
     settings: {
-      chatEnabled: {
-        type: Boolean,
-        default: true
-      },
-      leaderboardEnabled: {
-        type: Boolean,
-        default: true
-      },
-      cameraAllowed: {
-        type: Boolean,
-        default: true
-      },
-      micAllowed: {
-        type: Boolean,
-        default: true
-      },
-      micLocked: {
-        type: Boolean,
-        default: false
-      }
+      chatEnabled: { type: Boolean, default: true },
+      leaderboardEnabled: { type: Boolean, default: true },
+      cameraAllowed: { type: Boolean, default: true },
+      micAllowed: { type: Boolean, default: true },
+      screenShareAllowed: { type: Boolean, default: true },
+      micLocked: { type: Boolean, default: false }
     }
   },
-  {
-    timestamps: true
-  }
+  { timestamps: true }
 )
 
 studyRoomSchema.index({ visibility: 1, status: 1, createdAt: -1 })
+studyRoomSchema.index({ status: 1, emptySince: 1 })
 
 export default model('StudyRoom', studyRoomSchema)
