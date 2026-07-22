@@ -6,6 +6,7 @@ import { logger } from '../../utils/index.js'
 import { socketError } from '../utils/socketHandler.js'
 import { studyRoomModel, roomParticipantModel, roomMessageModel, pomodoroSessionModel } from '../../models/index.js'
 import { roomMediaService, studyRoomService } from '../../services/client/index.js'
+import { serializePomodoroState } from '../contracts/pomodoro.contract.js'
 import {
   ROOM_REDIS_KEY,
   ROOM_REDIS_TTL_SECONDS,
@@ -23,15 +24,17 @@ if value then redis.call('DEL', KEYS[1]) end
 return value`
 
 const getAndDelete = (key) => redisClient.eval(GETDEL_LUA, 1, key)
-const pomodoroJobId = (roomId, cycle, phase) => `pomo:${roomId}:${cycle}:${phase}`
+const pomodoroJobId = (roomId, cycle, phase) => `pomo-${roomId}-${cycle}-${phase}`
 
 const markParticipantLeft = async (roomId, userId) => {
   await roomParticipantModel.updateOne({ roomId, userId, leftAt: null }, { $set: { leftAt: new Date() } })
 }
 
-const markRoomBecameEmpty = async (nsp, roomId) => {
-  return closeRoom(nsp, roomId, null)
-}
+const markRoomBecameEmpty = (roomId) =>
+  studyRoomModel.updateOne({ _id: roomId, status: ROOM_STATUS.OPEN }, { $set: { emptySince: new Date() } })
+
+const markRoomOccupied = (roomId) =>
+  studyRoomModel.updateOne({ _id: roomId, status: ROOM_STATUS.OPEN }, { $set: { emptySince: null } })
 
 const markStudyStartIfWorking = async (roomId, userId) => {
   const pomo = await redisClient.hgetall(ROOM_REDIS_KEY.POMODORO(roomId))
@@ -76,10 +79,14 @@ const flushLeaderboardToDB = async (roomId) => {
 }
 
 const buildLeaderboard = async (roomId) => {
-  const [redisEntries, persisted] = await Promise.all([
+  const [redisEntries, persisted, activeUserIds] = await Promise.all([
     redisClient.zrange(ROOM_REDIS_KEY.LEADERBOARD(roomId), 0, -1, 'WITHSCORES'),
-    roomParticipantModel.find({ roomId, bannedAt: null }).select('userId studySeconds').lean()
+    roomParticipantModel.find({ roomId, bannedAt: null }).select('userId studySeconds').lean(),
+    roomSessionService.listPresenceUserIds(roomId)
   ])
+  const activeStartedAt = activeUserIds.length
+    ? await redisClient.mget(activeUserIds.map((userId) => ROOM_REDIS_KEY.STUDY_MARK(roomId, userId)))
+    : []
 
   const totals = new Map()
   for (const participant of persisted) {
@@ -89,6 +96,15 @@ const buildLeaderboard = async (roomId) => {
   for (let i = 0; i < redisEntries.length; i += 2) {
     const userId = String(redisEntries[i])
     totals.set(userId, (totals.get(userId) || 0) + Number(redisEntries[i + 1]))
+  }
+
+  const now = Date.now()
+  for (let i = 0; i < activeUserIds.length; i += 1) {
+    const startedAt = Number(activeStartedAt[i])
+    if (!Number.isFinite(startedAt) || startedAt <= 0) continue
+    const activeSeconds = Math.min(Math.max(0, Math.floor((now - startedAt) / 1000)), ROOM_LIMITS.WORK_MAX * 60)
+    const userId = String(activeUserIds[i])
+    totals.set(userId, (totals.get(userId) || 0) + activeSeconds)
   }
 
   return [...totals.entries()]
@@ -119,17 +135,7 @@ const buildRoomState = async (roomId, room) => {
     : []
 
   const now = Date.now()
-  const pomodoro = pomo?.status
-    ? {
-        ...pomo,
-        startedAt: Number(pomo.startedAt),
-        durationSec: Number(pomo.durationSec),
-        remainingSec:
-          pomo.status === POMODORO_STATUS.RUNNING
-            ? Math.max(0, Math.ceil((Number(pomo.startedAt) + Number(pomo.durationSec) * 1000 - now) / 1000))
-            : Number(pomo.remainingSec ?? pomo.durationSec)
-      }
-    : { status: POMODORO_STATUS.IDLE }
+  const pomodoro = serializePomodoroState(pomo, now)
 
   return {
     room,
@@ -383,6 +389,7 @@ const kick = async (nsp, roomId, hostId, targetUserId, { ban = false } = {}) => 
 export default {
   markParticipantLeft,
   markRoomBecameEmpty,
+  markRoomOccupied,
   markStudyStartIfWorking,
   settleStudyTime,
   settleAllStudyTime,

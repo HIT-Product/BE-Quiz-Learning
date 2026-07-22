@@ -1,22 +1,83 @@
 import { redisClient } from '../../configs/index.js'
-import { ROOM_DEVICE_TTL_SECONDS, ROOM_REDIS_KEY, ROOM_REDIS_TTL_SECONDS } from '../../constants/index.js'
+import {
+  ROOM_DEVICE_TTL_SECONDS,
+  ROOM_REDIS_KEY,
+  ROOM_REDIS_TTL_SECONDS,
+  ROOM_LIMITS,
+  ROOM_SESSION_TTL_SECONDS
+} from '../../constants/index.js'
 import { socketError } from '../utils/socketHandler.js'
 
-const CLAIM_DEVICE_LUA = `
-local previous = redis.call('GET', KEYS[1])
-local generation = redis.call('INCR', KEYS[2])
+const CLAIM_JOIN_LUA = `
+local presenceKey = KEYS[1]
+local activeKey = KEYS[2]
+local generationKey = KEYS[3]
+
+local roomId = ARGV[1]
+local userId = ARGV[2]
+local socketId = ARGV[3]
+local sessionId = ARGV[4]
+local deviceId = ARGV[5]
+local nowMs = tonumber(ARGV[6])
+local maxParticipants = tonumber(ARGV[7])
+local ttlSeconds = tonumber(ARGV[8])
+local switchConfirmed = ARGV[9] == '1'
+local expectedGeneration = tonumber(ARGV[10])
+local staleBeforeMs = tonumber(ARGV[11])
+
+local activeRaw = redis.call('GET', activeKey)
+local active = activeRaw and cjson.decode(activeRaw) or nil
+
+if active then
+  if tostring(active.roomId) ~= tostring(roomId) then
+    return { 'ACTIVE_OTHER_ROOM', activeRaw }
+  end
+  if tostring(active.deviceId) ~= tostring(deviceId) and not switchConfirmed then
+    return { 'SWITCH_REQUIRED', activeRaw }
+  end
+  if switchConfirmed and tonumber(active.generation) ~= expectedGeneration then
+    return { 'STALE_SWITCH', activeRaw }
+  end
+end
+
+local pairs = redis.call('HGETALL', presenceKey)
+for index = 1, #pairs, 2 do
+  local entry = cjson.decode(pairs[index + 1])
+  if tonumber(entry.lastSeen or 0) < staleBeforeMs then
+    redis.call('HDEL', presenceKey, pairs[index])
+  end
+end
+
+local previousPresenceRaw = redis.call('HGET', presenceKey, userId)
+if not previousPresenceRaw and redis.call('HLEN', presenceKey) >= maxParticipants then
+  return { 'ROOM_FULL' }
+end
+
+if active
+  and tostring(active.socketId) == tostring(socketId)
+  and tostring(active.deviceId) == tostring(deviceId) then
+  active.lastSeen = nowMs
+  local refreshed = cjson.encode(active)
+  redis.call('SET', activeKey, refreshed, 'EX', ttlSeconds)
+  redis.call('HSET', presenceKey, userId, refreshed)
+  redis.call('EXPIRE', presenceKey, ttlSeconds)
+  return { 'OK', tostring(active.generation), activeRaw, previousPresenceRaw or '', 'RETRY' }
+end
+
+local generation = redis.call('INCR', generationKey)
 local current = cjson.encode({
-  roomId = ARGV[1],
-  userId = ARGV[2],
-  socketId = ARGV[3],
-  sessionId = ARGV[4],
-  deviceId = ARGV[5],
+  roomId = roomId,
+  userId = userId,
+  socketId = socketId,
+  sessionId = sessionId,
+  deviceId = deviceId,
   generation = generation,
-  claimedAt = ARGV[6]
+  lastSeen = nowMs
 })
-redis.call('SET', KEYS[1], current, 'EX', ARGV[7])
-redis.call('EXPIRE', KEYS[2], ARGV[7])
-return { previous or '', current, tostring(generation) }
+redis.call('SET', activeKey, current, 'EX', ttlSeconds)
+redis.call('HSET', presenceKey, userId, current)
+redis.call('EXPIRE', presenceKey, ttlSeconds)
+return { 'OK', tostring(generation), activeRaw or '', previousPresenceRaw or '', 'CLAIMED' }
 `
 
 const RELEASE_DEVICE_LUA = `
@@ -27,18 +88,6 @@ if tostring(decoded.generation) ~= tostring(ARGV[1]) then return 0 end
 if tostring(decoded.socketId) ~= tostring(ARGV[2]) then return 0 end
 redis.call('DEL', KEYS[1])
 return 1
-`
-
-const JOIN_PRESENCE_LUA = `
-local current = redis.call('HGET', KEYS[1], ARGV[1])
-if not current and redis.call('HLEN', KEYS[1]) >= tonumber(ARGV[4]) then
-  return -1
-end
-local value = cjson.encode({ socketId = ARGV[2], generation = ARGV[3] })
-redis.call('HSET', KEYS[1], ARGV[1], value)
-redis.call('EXPIRE', KEYS[1], ARGV[5])
-if current then return 1 end
-return 2
 `
 
 const REMOVE_PRESENCE_LUA = `
@@ -61,10 +110,77 @@ const parseJson = (value) => {
   }
 }
 
-const claimDevice = async ({ roomId, userId, socketId, sessionId, deviceId }) => {
+const ROLLBACK_CLAIM_LUA = `
+local currentRaw = redis.call('GET', KEYS[1])
+if not currentRaw then return 0 end
+local current = cjson.decode(currentRaw)
+if tonumber(current.generation) ~= tonumber(ARGV[2])
+  or tostring(current.socketId) ~= tostring(ARGV[3]) then
+  return 0
+end
+if ARGV[4] ~= '' then
+  redis.call('SET', KEYS[1], ARGV[4], 'EX', ARGV[6])
+else
+  redis.call('DEL', KEYS[1])
+end
+if ARGV[5] ~= '' then
+  redis.call('HSET', KEYS[2], ARGV[1], ARGV[5])
+  redis.call('EXPIRE', KEYS[2], ARGV[6])
+else
+  redis.call('HDEL', KEYS[2], ARGV[1])
+end
+return 1
+`
+
+const HEARTBEAT_LUA = `
+local activeRaw = redis.call('GET', KEYS[1])
+if not activeRaw then return 0 end
+local active = cjson.decode(activeRaw)
+if tostring(active.roomId) ~= ARGV[1]
+  or tostring(active.socketId) ~= ARGV[2]
+  or tostring(active.deviceId) ~= ARGV[3]
+  or tonumber(active.generation) ~= tonumber(ARGV[4]) then
+  return 0
+end
+active.lastSeen = tonumber(ARGV[5])
+local refreshed = cjson.encode(active)
+redis.call('SET', KEYS[1], refreshed, 'EX', ARGV[6])
+redis.call('HSET', KEYS[2], ARGV[7], refreshed)
+redis.call('EXPIRE', KEYS[2], ARGV[6])
+return 1
+`
+
+const RELEASE_CURRENT_LUA = `
+local activeRaw = redis.call('GET', KEYS[1])
+local presenceRaw = redis.call('HGET', KEYS[2], ARGV[4])
+
+if activeRaw then
+  local active = cjson.decode(activeRaw)
+  if tostring(active.roomId) ~= ARGV[1]
+    or tostring(active.socketId) ~= ARGV[2]
+    or tonumber(active.generation) ~= tonumber(ARGV[3]) then
+    return -1
+  end
+end
+if presenceRaw then
+  local presence = cjson.decode(presenceRaw)
+  if tostring(presence.socketId) ~= ARGV[2]
+    or tonumber(presence.generation) ~= tonumber(ARGV[3]) then
+    return -1
+  end
+end
+
+if activeRaw then redis.call('DEL', KEYS[1]) end
+if presenceRaw then redis.call('HDEL', KEYS[2], ARGV[4]) end
+return redis.call('HLEN', KEYS[2])
+`
+
+const claimJoin = async ({ roomId, userId, socketId, sessionId, deviceId, maxParticipants, switchContext }) => {
+  const now = Date.now()
   const result = await redisClient.eval(
-    CLAIM_DEVICE_LUA,
-    2,
+    CLAIM_JOIN_LUA,
+    3,
+    ROOM_REDIS_KEY.PRESENCE(roomId),
     ROOM_REDIS_KEY.ACTIVE_DEVICE(userId),
     ROOM_REDIS_KEY.DEVICE_GENERATION(userId),
     String(roomId),
@@ -72,14 +188,25 @@ const claimDevice = async ({ roomId, userId, socketId, sessionId, deviceId }) =>
     String(socketId),
     String(sessionId),
     String(deviceId),
-    String(Date.now()),
-    String(ROOM_DEVICE_TTL_SECONDS)
+    String(now),
+    String(maxParticipants),
+    String(ROOM_SESSION_TTL_SECONDS),
+    switchContext ? '1' : '0',
+    String(switchContext?.expectedGeneration || 0),
+    String(now - ROOM_LIMITS.PRESENCE_STALE_SECONDS * 1000)
   )
 
+  const status = String(result?.[0] || 'INTERNAL_ERROR')
+  if (status !== 'OK') {
+    return { status, active: parseJson(result?.[1]) }
+  }
   return {
-    previous: parseJson(result?.[0]),
-    current: parseJson(result?.[1]),
-    generation: Number(result?.[2])
+    status,
+    generation: Number(result[1]),
+    previousActiveRaw: result[2] || '',
+    previousPresenceRaw: result[3] || '',
+    previousActive: parseJson(result[2]),
+    kind: result[4]
   }
 }
 
@@ -113,21 +240,6 @@ const releaseDevice = async ({ userId, socketId, generation }) => {
     String(socketId)
   )
   return Number(released) === 1
-}
-
-const joinPresence = async ({ roomId, userId, socketId, generation, maxParticipants }) => {
-  const result = await redisClient.eval(
-    JOIN_PRESENCE_LUA,
-    1,
-    ROOM_REDIS_KEY.PRESENCE(roomId),
-    String(userId),
-    String(socketId),
-    String(generation),
-    String(maxParticipants),
-    String(ROOM_REDIS_TTL_SECONDS)
-  )
-  if (Number(result) === -1) throw socketError('ROOM_FULL', 'Phong da day.')
-  return { isNewMember: Number(result) === 2 }
 }
 
 const removePresence = async ({ roomId, userId, socketId, generation }) => {
@@ -165,16 +277,74 @@ const countPresence = async (roomId) => {
   return redisClient.hlen(ROOM_REDIS_KEY.PRESENCE(roomId))
 }
 
+const rollbackClaim = async ({ roomId, userId, socketId, generation, previousActiveRaw, previousPresenceRaw }) =>
+  Number(
+    await redisClient.eval(
+      ROLLBACK_CLAIM_LUA,
+      2,
+      ROOM_REDIS_KEY.ACTIVE_DEVICE(userId),
+      ROOM_REDIS_KEY.PRESENCE(roomId),
+      String(userId),
+      String(generation),
+      String(socketId),
+      previousActiveRaw || '',
+      previousPresenceRaw || '',
+      String(ROOM_SESSION_TTL_SECONDS)
+    )
+  ) === 1
+
+const heartbeat = async ({ roomId, userId, socketId, deviceId, generation }) =>
+  Number(
+    await redisClient.eval(
+      HEARTBEAT_LUA,
+      2,
+      ROOM_REDIS_KEY.ACTIVE_DEVICE(userId),
+      ROOM_REDIS_KEY.PRESENCE(roomId),
+      String(roomId),
+      String(socketId),
+      String(deviceId),
+      String(generation),
+      String(Date.now()),
+      String(ROOM_SESSION_TTL_SECONDS),
+      String(userId)
+    )
+  ) === 1
+
+const releaseIfCurrent = async ({ roomId, userId, socketId, generation }) =>
+  Number(
+    await redisClient.eval(
+      RELEASE_CURRENT_LUA,
+      2,
+      ROOM_REDIS_KEY.ACTIVE_DEVICE(userId),
+      ROOM_REDIS_KEY.PRESENCE(roomId),
+      String(roomId),
+      String(socketId),
+      String(generation),
+      String(userId)
+    )
+  )
+
+const listPresenceEntries = async (roomId) => {
+  const values = await redisClient.hgetall(ROOM_REDIS_KEY.PRESENCE(roomId))
+  return Object.entries(values).flatMap(([userId, raw]) => {
+    const lease = parseJson(raw)
+    return lease ? [{ userId, ...lease }] : []
+  })
+}
+
 export default {
-  claimDevice,
+  claimJoin,
   getActiveDevice,
   isDeviceOwner,
   assertDeviceOwner,
   releaseDevice,
-  joinPresence,
   removePresence,
   refreshPresence,
   forceRemovePresence,
   listPresenceUserIds,
-  countPresence
+  countPresence,
+  rollbackClaim,
+  heartbeat,
+  releaseIfCurrent,
+  listPresenceEntries
 }

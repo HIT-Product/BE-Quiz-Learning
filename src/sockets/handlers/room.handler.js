@@ -51,35 +51,27 @@ const finishLeave = async (nsp, socket, roomId, userId, { releaseDevice = true }
     nsp.to(`room:${roomId}`).emit('room:member-left', { userId: String(userId) })
     await roomRealtimeService.transferHostIfNeeded(nsp, roomId, userId)
   } else {
-    await roomRealtimeService.markRoomBecameEmpty(nsp, roomId)
+    await roomRealtimeService.markRoomBecameEmpty(roomId)
   }
 }
 
-const performHandoff = async (nsp, socket, roomId, userId) => {
-  const claim = await roomSessionService.claimDevice({
-    roomId,
-    userId,
-    socketId: socket.id,
-    sessionId: socket.user.sessionId,
-    deviceId: socket.data.deviceId
-  })
+const assertClaimAccepted = (claim) => {
+  if (claim.status === 'OK') return
 
-  socket.data.generation = claim.generation
-
-  const previous = claim.previous
-  const changedDevice = previous && previous.socketId && previous.socketId !== socket.id
-  if (changedDevice) {
-    nsp.to(previous.socketId).emit('room:session-taken-over', {
-      roomId: String(roomId),
-      newDeviceId: socket.data.deviceId,
-      generation: claim.generation,
-      message: 'Phong hoc da duoc chuyen sang thiet bi khac.'
-    })
-    nsp.in(previous.socketId).socketsLeave(`room:${roomId}`)
-    await roomMediaService.removeParticipantForHandoff(roomId, userId)
+  const failures = {
+    ACTIVE_OTHER_ROOM: ['ACTIVE_ROOM_CONFLICT', 'Bạn đang hoạt động trong một phòng học khác.'],
+    SWITCH_REQUIRED: [
+      'SWITCH_REQUIRED',
+      'Phòng học này đang mở trên thiết bị khác. Hãy rời phiên cũ trước khi thử lại.'
+    ],
+    STALE_SWITCH: ['STALE_SWITCH', 'Yêu cầu chuyển thiết bị đã hết hạn. Vui lòng thử lại.'],
+    ROOM_FULL: ['ROOM_FULL', 'Phòng học đã đủ thành viên.']
   }
-
-  return claim
+  const [code, message] = failures[claim.status] || [
+    'INTERNAL_ERROR',
+    'Không thể giữ phiên phòng học. Vui lòng thử lại.'
+  ]
+  throw socketError(code, message)
 }
 
 const registerRoomHandlers = (nsp, socket) => {
@@ -91,30 +83,73 @@ const registerRoomHandlers = (nsp, socket) => {
       const { roomId } = validate(roomIdSchema, payload)
       const room = await studyRoomService.findOpenRoom(roomId)
       await studyRoomService.assertActiveParticipant(roomId, userId)
+      const profile = await userModel.findById(userId).select('displayName avatar avatarUrl').lean()
 
-      const claim = await performHandoff(nsp, socket, roomId, userId)
-      const presence = await roomSessionService.joinPresence({
+      const claim = await roomSessionService.claimJoin({
         roomId,
         userId,
         socketId: socket.id,
-        generation: claim.generation,
+        sessionId: socket.user.sessionId,
+        deviceId: socket.data.deviceId,
         maxParticipants: room.maxParticipants
       })
+      assertClaimAccepted(claim)
 
-      socket.join(`room:${roomId}`)
-      socket.data.roomId = roomId
-      socket.data.chatEnabled = room.settings.chatEnabled
-      socket.data.profile = await userModel.findById(userId).select('displayName avatar avatarUrl').lean()
-      await roomRealtimeService.markStudyStartIfWorking(roomId, userId)
+      socket.data.generation = claim.generation
+      const previous = claim.previousActive
+      const tookOver = Boolean(previous?.socketId && previous.socketId !== socket.id)
 
-      if (presence.isNewMember) {
-        socket.to(`room:${roomId}`).emit('room:member-joined', { userId: String(userId) })
-      }
+      try {
+        socket.join(`room:${roomId}`)
+        socket.data.roomId = roomId
+        socket.data.chatEnabled = room.settings.chatEnabled
+        socket.data.profile = profile
+        await roomRealtimeService.markRoomOccupied(roomId)
+        await roomRealtimeService.markStudyStartIfWorking(roomId, userId)
 
-      return {
-        ...(await roomRealtimeService.buildRoomState(roomId, room)),
-        deviceGeneration: claim.generation,
-        tookOver: Boolean(claim.previous && claim.previous.socketId !== socket.id)
+        const snapshot = {
+          ...(await roomRealtimeService.buildRoomState(roomId, room)),
+          deviceGeneration: claim.generation,
+          tookOver
+        }
+
+        if (tookOver) {
+          nsp.to(previous.socketId).emit('room:session-taken-over', {
+            roomId: String(roomId),
+            newDeviceId: socket.data.deviceId,
+            generation: claim.generation,
+            message: 'Phòng học đã được chuyển sang phiên mới.'
+          })
+          nsp.in(previous.socketId).socketsLeave(`room:${roomId}`)
+          await roomMediaService.removeParticipantForHandoff(roomId, userId)
+        }
+
+        if (!claim.previousPresenceRaw) {
+          socket.to(`room:${roomId}`).emit('room:member-joined', { userId: String(userId) })
+        }
+        return snapshot
+      } catch (error) {
+        socket.leave(`room:${roomId}`)
+        socket.data.roomId = null
+        socket.data.generation = null
+        await Promise.allSettled([
+          roomSessionService.rollbackClaim({
+            roomId,
+            userId,
+            socketId: socket.id,
+            generation: claim.generation,
+            previousActiveRaw: claim.previousActiveRaw,
+            previousPresenceRaw: claim.previousPresenceRaw
+          })
+        ])
+        try {
+          if ((await roomSessionService.countPresence(roomId)) === 0) {
+            await roomRealtimeService.markRoomBecameEmpty(roomId)
+          }
+        } catch (cleanupError) {
+          logger.warn(`Join rollback cleanup failed: room=${roomId} user=${userId} error=${cleanupError.message}`)
+        }
+        throw error
       }
     })
   )
@@ -132,6 +167,21 @@ const registerRoomHandlers = (nsp, socket) => {
       })
       await finishLeave(nsp, socket, roomId, userId)
       return { roomId }
+    })
+  )
+
+  socket.on(
+    'leaderboard:get',
+    safeHandler(async (payload) => {
+      const { roomId } = validate(roomIdSchema, payload)
+      await roomSessionService.assertDeviceOwner({
+        userId,
+        roomId,
+        socketId: socket.id,
+        generation: socket.data.generation,
+        deviceId: socket.data.deviceId
+      })
+      return roomRealtimeService.buildLeaderboard(roomId)
     })
   )
 
@@ -169,9 +219,8 @@ const registerRoomHandlers = (nsp, socket) => {
 
   socket.on(
     'room:close',
-    safeHandler(async (payload) => {
-      const { roomId } = validate(roomIdSchema, payload)
-      return roomRealtimeService.closeRoom(nsp, roomId, userId)
+    safeHandler(async () => {
+      throw socketError('FEATURE_NOT_READY', 'Tính năng realtime/media tạm thời chưa khả dụng trong lúc nâng cấp.')
     })
   )
 
