@@ -6,4 +6,6 @@ import hashToken from './hashToken.js'
 import jwtUtils from './jwt.js'
 import refreshCookieOptions from './cookie.js'
 
-export { catchAsync, ApiError, response, logger, hashToken, jwtUtils, refreshCookieOptions }
+const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+export { catchAsync, ApiError, response, logger, hashToken, jwtUtils, refreshCookieOptions, escapeRegex }

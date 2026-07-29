@@ -1,11 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 
-import {
-  DECK_VISIBILITY,
-  LEARNING_STATUS,
-  QUESTION_LIMITS,
-  QUESTION_TYPE
-} from '../../constants/index.js'
+import { DECK_VISIBILITY, LEARNING_STATUS, QUESTION_LIMITS, QUESTION_TYPE } from '../../constants/index.js'
 import { deckModel, flashcardModel, quizAttemptModel, cardProgressModel, userModel } from '../../models/index.js'
 import { ApiError } from '../../utils/index.js'
 import { shuffle, matchAnswer } from '../../utils/quiz.js'

@@ -8,6 +8,7 @@ import flashcardRouter from './flashcard.route.js'
 import quizRouter from './quiz.route.js'
 import learnRouter from './learn.route.js'
 import studyRouter from './study.route.js'
+import studyRoomRouter from './studyRoom.route.js'
 
 const clientRouter = Router()
 
@@ -19,5 +20,6 @@ clientRouter.use('/decks/:deckId/quiz', quizRouter)
 clientRouter.use('/decks/:deckId/learn', learnRouter)
 clientRouter.use('/decks/:deckId/study', studyRouter)
 clientRouter.use('/decks', deckRouter)
+clientRouter.use('/study-rooms', studyRoomRouter)
 
 export default clientRouter
