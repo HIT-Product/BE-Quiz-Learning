@@ -172,6 +172,26 @@
       "type": "string"
     },
     {
+      "key": "studyRoomId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "roomCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "roomMessageBefore",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "deviceId",
+      "value": "postman-device-0001",
+      "type": "string"
+    },
+    {
       "key": "searchKeyword",
       "value": "unit",
       "type": "string"
@@ -2688,6 +2708,185 @@
               }
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "Study Rooms",
+      "description": "REST API phong hoc chung. Tat ca request can Bearer {{accessToken}}. Flow co ban: Create Room -> ket noi Socket.IO namespace /study-rooms de khoi tao phien thiet bi -> Media Token, hoac Join by Room Code -> Get Room.",
+      "item": [
+        {
+          "name": "Create Study Room",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/study-rooms",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Pomodoro cung HIT\",\n  \"pomodoroWorkMin\": 25,\n  \"pomodoroBreakMin\": 5,\n  \"maxParticipants\": 20,\n  \"settings\": {\n    \"chatEnabled\": true,\n    \"leaderboardEnabled\": true,\n    \"cameraAllowed\": true,\n    \"micAllowed\": true,\n    \"micLocked\": false\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Tao phong hoc va luu studyRoomId, roomCode tu response. Mot tai khoan chi duoc o trong mot phong dang mo tai mot thoi diem."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "const data = (pm.response.json() || {}).data || {};",
+                  "if (data._id) pm.collectionVariables.set('studyRoomId', data._id);",
+                  "if (data.roomCode) pm.collectionVariables.set('roomCode', data.roomCode);",
+                  "pm.test(\"Co room id va room code\", () => {",
+                  "  pm.expect(data).to.have.property('_id');",
+                  "  pm.expect(data).to.have.property('roomCode');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Public Study Rooms",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/study-rooms?page=1&limit=20&keyword=",
+            "description": "Liet ke cac phong public dang mo. Co the loc theo keyword; API tra items va pagination."
+          }
+        },
+        {
+          "name": "Join Study Room by Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/study-rooms/join",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomCode\": \"{{roomCode}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Tham gia bang ma phong 10 ky tu. Chay Create Study Room truoc de tu dong co roomCode, hoac dien ma phong cua nguoi khac."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const data = (pm.response.json() || {}).data || {};",
+                  "if (data._id) pm.collectionVariables.set('studyRoomId', data._id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Study Room",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/study-rooms/{{studyRoomId}}",
+            "description": "Lay chi tiet phong. Chi thanh vien cua phong moi truy cap duoc."
+          }
+        },
+        {
+          "name": "List Room Messages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/study-rooms/{{studyRoomId}}/messages?limit=50",
+            "description": "Lay lich su chat theo thu tu cu den moi. De phan trang cursor, them &before={{roomMessageBefore}} voi gia tri ISO date."
+          }
+        },
+        {
+          "name": "Get Room Leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/study-rooms/{{studyRoomId}}/leaderboard",
+            "description": "Lay toi da 50 thanh vien, sap xep theo studySeconds giam dan."
+          }
+        },
+        {
+          "name": "Create Room Media Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "x-device-id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": "{{baseUrl}}/study-rooms/{{studyRoomId}}/media-token",
+            "description": "Tao token LiveKit. Yeu cau phien phong dang active tren cung deviceId; hay ket noi Socket.IO namespace /study-rooms truoc khi goi. Response tra token va url."
+          }
+        },
+        {
+          "name": "Close Study Room",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/study-rooms/{{studyRoomId}}/close",
+            "description": "Dong phong. Chi chu phong co quyen goi endpoint nay."
+          }
         }
       ]
     },

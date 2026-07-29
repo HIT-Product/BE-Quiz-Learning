@@ -4,7 +4,13 @@ import Papa from 'papaparse'
 import { ApiError } from '../../utils/index.js'
 import { deckModel, flashcardModel } from '../../models/index.js'
 import { stripOptionPrefix, matchAnswer } from '../../utils/quiz.js'
-import { IMPORT_LIMITS, IMPORT_DELIMITER, OPTION_LINE_PATTERN, FLASHCARD_TYPE, FLASHCARD_SOURCE } from '../../constants/index.js'
+import {
+  IMPORT_LIMITS,
+  IMPORT_DELIMITER,
+  OPTION_LINE_PATTERN,
+  FLASHCARD_TYPE,
+  FLASHCARD_SOURCE
+} from '../../constants/index.js'
 
 // Kiểm tra deck sở hữu
 const assertOwnedDeck = async (deckId, ownerId) => {
@@ -39,7 +45,7 @@ const create = async (deckId, ownerId, { front, back, sortOrder, distractors }) 
   }
 
   const manual = Array.isArray(distractors) ? distractors.filter(Boolean) : []
-  let finalBack = stripOptionPrefix(back) // Luôn làm sạch (fix R1)
+  let finalBack = stripOptionPrefix(back)
 
   let stem = ''
   let finalDistractors = manual
@@ -82,7 +88,7 @@ const update = async (deckId, cardId, ownerId, payload) => {
   const touchedFrontOrBack = payload.front !== undefined || payload.back !== undefined
 
   if (manual && manual.length > 0) {
-    card.back = stripOptionPrefix(card.back) // fix R1: đồng nhất khi manual
+    card.back = stripOptionPrefix(card.back)
     card.distractors = manual
     card.cardType = FLASHCARD_TYPE.MULTIPLE_CHOICE
   } else if (touchedFrontOrBack) {
@@ -131,14 +137,14 @@ const normalizeAnswer = (s) =>
     .toLowerCase()
     .replace(/\s+/g, ' ')
 
-// fix #5: map keyword delimiter sang ký tự thực
+// Chuyển tên delimiter thành ký tự.
 const resolveDelimiter = (d) => {
   if (d === IMPORT_DELIMITER.AUTO) return ''
   if (d === IMPORT_DELIMITER.TAB) return IMPORT_DELIMITER.TAB_CHAR
   return d
 }
 
-// So khớp back với option MC. Trả về back "sạch" (đã strip prefix) và distractors.
+// Ghép đáp án với lựa chọn.
 const extractMC = (front, back) => {
   const { stem, options } = parseFrontMC(front)
   if (options.length < IMPORT_LIMITS.MIN_MULTIPLE_CHOICE_OPTIONS) {
@@ -161,7 +167,6 @@ const extractMC = (front, back) => {
     .filter((opt) => opt.length <= IMPORT_LIMITS.MAX_DISTRACTOR_LENGTH)
     .slice(0, IMPORT_LIMITS.MAX_DISTRACTORS)
 
-  // Lưu back đã strip prefix cho đồng nhất với distractor
   return {
     stem,
     back: stripOptionPrefix(correct),
@@ -190,7 +195,7 @@ const parseFrontMC = (front) => {
   return { stem, options }
 }
 
-// Wrapper PapaParse: tách riêng để test
+// Tách parser để dễ test.
 const parseCsv = (rawText, options) => {
   const delimiter = resolveDelimiter(options.delimiter)
   const hasHeader = options.hasHeader !== false
@@ -211,8 +216,8 @@ const parseCsv = (rawText, options) => {
   return { rows: result.data, detectedDelimiter: result.meta?.delimiter || delimiter }
 }
 
-// Bước 1: trả headers và sample rows để FE build column picker
-// fix #6: kiểm tra sở hữu deck trước khi parse
+// Đọc header và dữ liệu mẫu.
+
 const previewImport = async (deckId, ownerId, rawText, options) => {
   await assertOwnedDeck(deckId, ownerId)
 
@@ -240,7 +245,7 @@ const previewImport = async (deckId, ownerId, rawText, options) => {
   }
 }
 
-// Bước 2: import với column mapping
+// Import theo column mapping.
 const importCards = async (deckId, ownerId, { rawText, columnMapping, options, dryRun }) => {
   const opts = {
     delimiter: options?.delimiter || IMPORT_DELIMITER.AUTO,
@@ -271,12 +276,12 @@ const importCards = async (deckId, ownerId, { rawText, columnMapping, options, d
       return skipped.push({ row: rowNum, reason: `vượt quá ${IMPORT_LIMITS.MAX_FIELD_LENGTH} ký tự` })
     }
 
-    // Distractor từ cột người dùng chọn (fix R2: strip prefix trước khi dedup)
+    // Chuẩn hóa trước khi loại trùng.
     const colDistractors = distractorCols
       .map((i) => stripOptionPrefix(cleanCell(row[i])))
       .filter((v) => v && v.length <= IMPORT_LIMITS.MAX_DISTRACTOR_LENGTH)
 
-    // Tách block MC trong front (back đã strip prefix qua extractMC)
+    // Tách block trắc nghiệm.
     const mc = extractMC(front, back)
     const finalBack = mc.back
 

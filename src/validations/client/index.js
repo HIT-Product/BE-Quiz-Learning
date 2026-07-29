@@ -7,6 +7,7 @@ import quizValidation from './quiz.validation.js'
 import learnValidation from './learn.validation.js'
 import studyValidation from './study.validation.js'
 import learnSessionValidation from './learnSession.validation.js'
+import studyRoomValidation from './studyRoom.validation.js'
 
 export {
   authValidation,
@@ -17,5 +18,6 @@ export {
   quizValidation,
   learnValidation,
   studyValidation,
-  learnSessionValidation
+  learnSessionValidation,
+  studyRoomValidation
 }
