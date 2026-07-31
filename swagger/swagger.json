@@ -47,6 +47,10 @@
     {
       "name": "Study Rooms",
       "description": "Phong hoc thoi gian thuc"
+    },
+    {
+      "name": "Dashboard",
+      "description": "Tong quan hoc tap ca nhan va study streak"
     }
   ],
   "security": [
@@ -942,6 +946,31 @@
         }
       }
     },
+    "/dashboard": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Lay tong quan hoc tap ca nhan",
+        "description": "Tra so lieu Dashboard va chuoi ngay hoc theo timezone Asia/Ho_Chi_Minh.",
+        "operationId": "getDashboardOverview",
+        "responses": {
+          "200": {
+            "description": "Lay Dashboard thanh cong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
     "/study-rooms": {
       "get": {
         "tags": [
@@ -1221,6 +1250,98 @@
           }
         },
         "additionalProperties": true
+      },
+      "StudyStreak": {
+        "type": "object",
+        "properties": {
+          "currentDays": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 6
+          },
+          "longestDays": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 18
+          },
+          "lastStudyDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "example": "2026-07-29"
+          },
+          "timezone": {
+            "type": "string",
+            "enum": [
+              "Asia/Ho_Chi_Minh"
+            ]
+          }
+        },
+        "required": [
+          "currentDays",
+          "longestDays",
+          "lastStudyDate",
+          "timezone"
+        ]
+      },
+      "DashboardResponse": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "Lay tong quan hoc tap thanh cong."
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "stats": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "studyStreak": {
+                "$ref": "#/components/schemas/StudyStreak"
+              },
+              "progressByStatus": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer"
+                }
+              },
+              "recentDecks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "recentAttempts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            },
+            "required": [
+              "stats",
+              "studyStreak",
+              "progressByStatus",
+              "recentDecks",
+              "recentAttempts"
+            ]
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "data"
+        ]
       },
       "ErrorResponse": {
         "type": "object",

@@ -13,6 +13,7 @@ import studyRoomModel from './studyRoom.model.js'
 import roomMessageModel from './roomMessage.model.js'
 import roomParticipantModel from './roomParticipant.model.js'
 import pomodoroSessionModel from './pomodoroSession.model.js'
+import studyActivityModel from './studyActivity.model.js'
 
 export {
   userModel,
@@ -29,5 +30,6 @@ export {
   studyRoomModel,
   roomMessageModel,
   roomParticipantModel,
-  pomodoroSessionModel
+  pomodoroSessionModel,
+  studyActivityModel
 }

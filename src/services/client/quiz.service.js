@@ -5,8 +5,9 @@ import { deckModel, flashcardModel, quizAttemptModel, cardProgressModel, userMod
 import { ApiError } from '../../utils/index.js'
 import { shuffle, matchAnswer } from '../../utils/quiz.js'
 import { buildMultipleChoice, buildTrueFalse, buildWritten } from './question.service.js'
+import { STUDY_ACTIVITY_SOURCE, recordStudyActivity } from './studyActivity.service.js'
 
-// Kiểm tra quyền truy cập deck
+// Kiểm tra quyền truy cập deck.
 const getAccessibleDeck = async (deckId, userId) => {
   const deck = await deckModel.findById(deckId)
   if (!deck) {
@@ -25,7 +26,7 @@ const builders = {
   [QUESTION_TYPE.WRITTEN]: buildWritten
 }
 
-// Sinh quiz
+// Tạo quiz.
 const generate = async (deckId, userId, config) => {
   await getAccessibleDeck(deckId, userId)
 
@@ -75,7 +76,7 @@ const generate = async (deckId, userId, config) => {
   return { attemptId: attempt._id, startedAt: attempt.startedAt, questions: safeQuestions }
 }
 
-// Nộp quiz
+// Chấm và nộp quiz.
 const submit = async (deckId, userId, payload) => {
   await getAccessibleDeck(deckId, userId)
 
@@ -118,6 +119,8 @@ const submit = async (deckId, userId, payload) => {
   if (progressOps.length > 0) {
     await cardProgressModel.bulkWrite(progressOps)
   }
+
+  await recordStudyActivity(userId, STUDY_ACTIVITY_SOURCE.QUIZ, attempt.submittedAt)
 
   return attempt
 }
