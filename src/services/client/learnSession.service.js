@@ -4,6 +4,7 @@ import { deckModel, flashcardModel, cardProgressModel, learnSessionModel } from 
 import { ApiError } from '../../utils/index.js'
 import { matchAnswer, isCloseAnswer } from '../../utils/quiz.js'
 import { buildMultipleChoice, buildTrueFalse, buildWritten, buildFlashcard, viewCard } from './question.service.js'
+import { STUDY_ACTIVITY_SOURCE, recordStudyActivity } from './studyActivity.service.js'
 import {
   DECK_VISIBILITY,
   QUESTION_TYPE,
@@ -32,7 +33,7 @@ const MODE_DEFAULTS = {
   }
 }
 
-// Truy cập deck
+// Kiểm tra quyền truy cập deck.
 const getAccessibleDeck = async (deckId, userId) => {
   const deck = await deckModel.findById(deckId)
   if (!deck) throw new ApiError(StatusCodes.NOT_FOUND, 'Khong tim thay bo the.')
@@ -43,7 +44,7 @@ const getAccessibleDeck = async (deckId, userId) => {
   return deck
 }
 
-// Cấu hình
+// Chuẩn hóa cấu hình phiên học.
 const activeLadder = (types) => LADDER.filter((t) => types.includes(t))
 
 const masteryTargetFor = (session) => {
@@ -69,7 +70,7 @@ const buildConfig = (mode, input = {}) => {
   }
 }
 
-// Phạm vi thẻ
+// Lọc thẻ theo phạm vi phiên học.
 // STARRED cần `starred`; HARD dùng status learning.
 
 const scopeFilter = (cards, statusMap, progressMap, scope) => {
@@ -85,7 +86,7 @@ const scopeFilter = (cards, statusMap, progressMap, scope) => {
 
 const loadCards = async (deckId) => flashcardModel.find({ deckId }).sort({ sortOrder: 1, createdAt: 1 })
 
-// Kích hoạt thẻ mới
+// Kích hoạt thẻ mới.
 const activateCards = (session) => {
   const active = session.cards.filter((c) => c.due !== null && !c.mastered).length
   let slots = session.config.activeSetSize - active
@@ -99,7 +100,7 @@ const activateCards = (session) => {
   }
 }
 
-// Chọn câu tiếp theo
+// Chọn câu tiếp theo.
 const selectNext = (session) => {
   const notMastered = session.cards.filter((c) => !c.mastered && c.due !== null)
   if (notMastered.length === 0) return null
@@ -117,7 +118,7 @@ const selectNext = (session) => {
   return pool[0]
 }
 
-// Chọn loại câu hỏi
+// Chọn loại câu hỏi.
 const questionTypeFor = (session, cs) => {
   const ladder = activeLadder(session.config.types)
   const hasFlashcard = session.config.types.includes(QUESTION_TYPE.FLASHCARD)
@@ -134,7 +135,7 @@ const questionTypeFor = (session, cs) => {
   return ladder[Math.min(cs.stage, ladder.length - 1)]
 }
 
-// Tạo câu hỏi
+// Tạo câu hỏi.
 const generateQuestion = (session, cs, cardsById, allCards) => {
   const side = session.config.answerSide
   const card = cardsById.get(cs.flashcardId.toString())
@@ -177,7 +178,7 @@ const blockInfo = (session) => {
   }
 }
 
-// Đồng bộ tiến độ
+// Đồng bộ tiến độ thẻ.
 const syncProgress = async (userId, flashcardId, status) => {
   await cardProgressModel.updateOne(
     { userId, flashcardId },
@@ -190,7 +191,7 @@ const syncProgress = async (userId, flashcardId, status) => {
   )
 }
 
-// Áp dụng kết quả
+// Áp dụng kết quả trả lời vào trạng thái phiên học.
 const applyOutcome = (session, cs, outcome) => {
   const target = masteryTargetFor(session)
   cs.exposed = true
@@ -239,7 +240,7 @@ const applyOutcome = (session, cs, outcome) => {
   }
 }
 
-// Chấm câu trả lời
+// Chấm câu trả lời.
 const grade = (session, payload) => {
   const cur = session.current
   const cfg = session.config
@@ -469,6 +470,7 @@ const answer = async (deckId, userId, payload) => {
   session.markModified('current')
   session.markModified('lastGraded')
   await session.save()
+  await recordStudyActivity(userId, STUDY_ACTIVITY_SOURCE.LEARN_SESSION)
 
   const card = cmap.byId.get(cs.flashcardId.toString())
   return {

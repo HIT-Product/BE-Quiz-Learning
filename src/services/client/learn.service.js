@@ -12,8 +12,9 @@ import { deckModel, flashcardModel, cardProgressModel } from '../../models/index
 import { ApiError } from '../../utils/index.js'
 import { shuffle, normalize, matchAnswer } from '../../utils/quiz.js'
 import { buildMultipleChoice, buildTrueFalse, buildWritten, buildFlashcard } from './question.service.js'
+import { STUDY_ACTIVITY_SOURCE, recordStudyActivity } from './studyActivity.service.js'
 
-// Kiểm tra quyền truy cập deck
+// Kiểm tra quyền truy cập deck.
 const getAccessibleDeck = async (deckId, userId) => {
   const deck = await deckModel.findById(deckId)
   if (!deck) throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy bộ thẻ.')
@@ -24,7 +25,7 @@ const getAccessibleDeck = async (deckId, userId) => {
   return deck
 }
 
-// Chọn dạng câu hỏi
+// Chọn dạng câu hỏi.
 const pickType = (status, allowedTypes) => {
   const order = {
     [LEARNING_STATUS.NEW]: [QUESTION_TYPE.MULTIPLE_CHOICE, QUESTION_TYPE.TRUE_FALSE, QUESTION_TYPE.WRITTEN],
@@ -36,7 +37,7 @@ const pickType = (status, allowedTypes) => {
   return usable[0] || QUESTION_TYPE.MULTIPLE_CHOICE
 }
 
-// Sinh vòng học
+// Tạo vòng học.
 const buildRound = async (
   deckId,
   userId,
@@ -79,14 +80,14 @@ const buildRound = async (
   return { deckId, questions }
 }
 
-// Tính trạng thái học tiếp theo
+// Tính trạng thái học tiếp theo.
 const nextStatus = (current, isCorrect) => {
   if (!isCorrect) return LEARNING_STATUS.LEARNING
   if (current === LEARNING_STATUS.NEW) return LEARNING_STATUS.LEARNING
   return LEARNING_STATUS.REMEMBERED
 }
 
-// Chấm câu trả lời
+// Chấm và ghi nhận câu trả lời.
 const submitAnswer = async (deckId, userId, payload) => {
   await getAccessibleDeck(deckId, userId)
 
@@ -112,16 +113,19 @@ const submitAnswer = async (deckId, userId, payload) => {
   const existing = await cardProgressModel.findOne({ userId, flashcardId })
   const current = existing?.status || LEARNING_STATUS.NEW
   const status = nextStatus(current, isCorrect)
+  const answeredAt = new Date()
 
   const progress = await cardProgressModel.findOneAndUpdate(
     { userId, flashcardId },
     {
-      $set: { status, lastReviewedAt: new Date() },
+      $set: { status, lastReviewedAt: answeredAt },
       $inc: { reviewCount: 1 },
       $setOnInsert: { userId, flashcardId }
     },
     { new: true, upsert: true }
   )
+
+  await recordStudyActivity(userId, STUDY_ACTIVITY_SOURCE.LEARN_SESSION, answeredAt)
 
   return { isCorrect, correctAnswer, status: progress.status }
 }

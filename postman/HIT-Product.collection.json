@@ -2712,6 +2712,44 @@
       ]
     },
     {
+      "name": "Dashboard",
+      "description": "API tong quan hoc tap ca nhan, bao gom study streak theo gio Viet Nam.",
+      "item": [
+        {
+          "name": "Get Dashboard Overview",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/dashboard",
+            "description": "Tra so lieu Dashboard va studyStreak theo timezone Asia/Ho_Chi_Minh."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Study streak dung contract\", () => {",
+                  "  pm.expect(json.data).to.have.property('studyStreak');",
+                  "  pm.expect(json.data.studyStreak).to.include.keys('currentDays', 'longestDays', 'lastStudyDate', 'timezone');",
+                  "  pm.expect(json.data.studyStreak.timezone).to.eql('Asia/Ho_Chi_Minh');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Study Rooms",
       "description": "REST API phong hoc chung. Tat ca request can Bearer {{accessToken}}. Flow co ban: Create Room -> ket noi Socket.IO namespace /study-rooms de khoi tao phien thiet bi -> Media Token, hoac Join by Room Code -> Get Room.",
       "item": [
