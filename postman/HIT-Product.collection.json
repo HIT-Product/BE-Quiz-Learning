@@ -137,6 +137,21 @@
       "type": "string"
     },
     {
+      "key": "learnIncludeFlashcard",
+      "value": "true",
+      "type": "boolean"
+    },
+    {
+      "key": "learnSessionAnswerBody",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "learnSessionRetypeBody",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "studyCardId",
       "value": "",
       "type": "string"
@@ -2380,7 +2395,7 @@
     },
     {
       "name": "Learn",
-      "description": "API che do hoc Learn. Flow de test: Build Learn Round -> Submit Learn Answer - Auto. Cac request rieng dung de test multiple_choice / true_false / written.",
+      "description": "API che do hoc Learn. Legacy flow dung Build Learn Round -> Submit Learn Answer. Flow khuyen dung dung tron bo Learn Session: Start -> Current/Answer/Override -> Reset. Khong reset Session roi build lai bang Legacy Learn vi Legacy doc CardProgress dung chung voi Study/Quiz.",
       "item": [
         {
           "name": "Build Learn Round",
@@ -2393,8 +2408,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/decks/{{deckId}}/learn?limit=10&onlyUnlearned=false&types=multiple_choice,true_false,written",
-            "description": "BUOC 1: Sinh mot vong Learn va tu tao body tra loi mau. Chay request nay truoc, sau do chay Submit Learn Answer - Auto."
+            "url": "{{baseUrl}}/decks/{{deckId}}/learn?limit=10&onlyUnlearned=false&includeFlashcard={{learnIncludeFlashcard}}&types=multiple_choice,true_false,written",
+            "description": "BUOC 1: Sinh mot vong Learn va tu tao body tra loi mau. Dat bien collection `learnIncludeFlashcard` thanh true de co the lật the, hoac false de chi sinh multiple_choice / true_false / written. Chay request nay truoc, sau do chay Submit Learn Answer - Auto."
           },
           "event": [
             {
@@ -2703,6 +2718,306 @@
                   "  pm.expect(data).to.have.property('isCorrect');",
                   "  pm.expect(data).to.have.property('correctAnswer');",
                   "  pm.expect(data).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Start Learn Session - Ordered Ladder",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/learn/session",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"master\",\n  \"config\": {\n    \"types\": [\n      \"multiple_choice\",\n      \"true_false\",\n      \"written\"\n    ],\n    \"answerSide\": \"front\",\n    \"blockSize\": 7,\n    \"activeSetSize\": 7,\n    \"scope\": \"all\",\n    \"writtenGradeMode\": \"moderate\",\n    \"retypeWrongAnswers\": true\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Bat dau hoac tiep tuc Learn Session. Thu tu moi card: multiple_choice -> true_false -> written. retypeWrongAnswers=true bat buoc go lai dap an dung sau khi sai. Neu muon co lat the, them flashcard vao config.types."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json().data || {};",
+                  "const q = data.current;",
+                  "if (q) {",
+                  "  const body = { flashcardId: q.flashcardId };",
+                  "  if (q.type === 'flashcard') body.known = true;",
+                  "  else if (q.type === 'multiple_choice') body.selectedAnswer = (q.options && q.options[0]) || '';",
+                  "  else if (q.type === 'true_false') body.selectedAnswer = 'true';",
+                  "  else body.selectedAnswer = 'xin chao';",
+                  "  pm.collectionVariables.set('learnSessionAnswerBody', JSON.stringify(body, null, 2));",
+                  "}",
+                  "if (data.retype) {",
+                  "  pm.collectionVariables.set('learnSessionRetypeBody', JSON.stringify({ flashcardId: data.retype.flashcardId, typedAnswer: data.retype.correctAnswer }, null, 2));",
+                  "}",
+                  "pm.test(\"Co session va buoc hien tai\", () => {",
+                  "  pm.expect(data).to.have.property('sessionId');",
+                  "  pm.expect(Boolean(q || data.retype)).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Current Learn Session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/learn/session",
+            "description": "Lay trang thai va cau hoi hien tai cua Learn Session dang chay."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json().data || {};",
+                  "const q = data.current;",
+                  "if (q) {",
+                  "  const body = { flashcardId: q.flashcardId };",
+                  "  if (q.type === 'flashcard') body.known = true;",
+                  "  else if (q.type === 'multiple_choice') body.selectedAnswer = (q.options && q.options[0]) || '';",
+                  "  else if (q.type === 'true_false') body.selectedAnswer = 'true';",
+                  "  else body.selectedAnswer = 'xin chao';",
+                  "  pm.collectionVariables.set('learnSessionAnswerBody', JSON.stringify(body, null, 2));",
+                  "}",
+                  "if (data.retype) {",
+                  "  pm.collectionVariables.set('learnSessionRetypeBody', JSON.stringify({ flashcardId: data.retype.flashcardId, typedAnswer: data.retype.correctAnswer }, null, 2));",
+                  "}",
+                  "pm.test(\"Co cau hien tai hoac dang cho go lai\", () => pm.expect(Boolean(q || data.retype)).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Answer Learn Session - Auto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/learn/session/answer",
+            "body": {
+              "mode": "raw",
+              "raw": "{{learnSessionAnswerBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Tra loi cau hien tai. Chay Start hoac Get Current truoc de tao learnSessionAnswerBody."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('learnSessionAnswerBody')) { throw new Error('Hay chay Start Learn Session truoc.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json().data || {};",
+                  "const q = data.next;",
+                  "if (q) {",
+                  "  const body = { flashcardId: q.flashcardId };",
+                  "  if (q.type === 'flashcard') body.known = true;",
+                  "  else if (q.type === 'multiple_choice') body.selectedAnswer = (q.options && q.options[0]) || '';",
+                  "  else if (q.type === 'true_false') body.selectedAnswer = 'true';",
+                  "  else body.selectedAnswer = 'xin chao';",
+                  "  pm.collectionVariables.set('learnSessionAnswerBody', JSON.stringify(body, null, 2));",
+                  "}",
+                  "if (data.retypeRequired && data.retype) {",
+                  "  pm.collectionVariables.set('learnSessionRetypeBody', JSON.stringify({ flashcardId: data.retype.flashcardId, typedAnswer: data.retype.correctAnswer }, null, 2));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Retype Wrong Learn Session Answer - Auto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/learn/session/retype",
+            "body": {
+              "mode": "raw",
+              "raw": "{{learnSessionRetypeBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Go lai dap an dung sau mot cau sai. Chay Answer Learn Session den khi retypeRequired=true truoc."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('learnSessionRetypeBody')) { throw new Error('Chua co dap an dang cho go lai.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json().data || {};",
+                  "pm.test(\"Go lai thanh cong\", () => pm.expect(data.accepted).to.eql(true));",
+                  "const q = data.next;",
+                  "if (q) {",
+                  "  const body = { flashcardId: q.flashcardId };",
+                  "  if (q.type === 'flashcard') body.known = true;",
+                  "  else if (q.type === 'multiple_choice') body.selectedAnswer = (q.options && q.options[0]) || '';",
+                  "  else if (q.type === 'true_false') body.selectedAnswer = 'true';",
+                  "  else body.selectedAnswer = 'xin chao';",
+                  "  pm.collectionVariables.set('learnSessionAnswerBody', JSON.stringify(body, null, 2));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Override Last Learn Session Answer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/learn/session/override",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Ghi de cau vua cham sai thanh dung. Chi goi ngay sau mot dap an sai."
+          }
+        },
+        {
+          "name": "Reset Learn Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/learn/session/reset",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"restart\": false,\n  \"resetProgress\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Xoa Learn Session dang chay. resetProgress=true se xoa CardProgress cua user trong deck de Legacy Build Learn cung quay ve bac dau; luu y CardProgress dung chung voi Study/Quiz. Dat restart=true de reset va khoi dong lai Session moi."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const deckId = pm.collectionVariables.get('deckId');",
+                  "if (!deckId) { throw new Error('Thieu deckId. Hay chay Create Deck truoc de Postman luu {{deckId}}.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const json = pm.response.json();",
+                  "const data = json.data || {};",
+                  "pm.test(\"Da reset phien Learn\", () => {",
+                  "  pm.expect(data.reset).to.eql(true);",
+                  "  pm.expect(data.progressReset).to.eql(true);",
                   "});"
                 ]
               }

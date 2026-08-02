@@ -41,7 +41,7 @@ const pickType = (status, allowedTypes) => {
 const buildRound = async (
   deckId,
   userId,
-  { limit = QUESTION_LIMITS.DEFAULT_LEARN_LIMIT, onlyUnlearned = true, types }
+  { limit = QUESTION_LIMITS.DEFAULT_LEARN_LIMIT, onlyUnlearned = true, includeFlashcard = true, types }
 ) => {
   await getAccessibleDeck(deckId, userId)
 
@@ -67,7 +67,7 @@ const buildRound = async (
   const questions = selected.map((card) => {
     const status = statusMap.get(card._id.toString()) || LEARNING_STATUS.NEW
 
-    if (status === LEARNING_STATUS.NEW && Math.random() < 0.5) {
+    if (includeFlashcard && status === LEARNING_STATUS.NEW && Math.random() < 0.5) {
       return buildFlashcard(card)
     }
 

@@ -56,11 +56,13 @@ const learnSessionSchema = new mongoose.Schema(
         enum: Object.values(WRITTEN_GRADE_MODE),
         default: WRITTEN_GRADE_MODE.MODERATE
       },
+      retypeWrongAnswers: { type: Boolean, default: false },
       timeTargetMin: { type: Number, default: null }
     },
     cards: { type: [cardStateSchema], default: [] },
     step: { type: Number, default: 0 }, // Số câu đã trả lời = đồng hồ lịch trình
     current: { type: mongoose.Schema.Types.Mixed, default: null }, // Câu đang chờ trả lời
+    pendingRetype: { type: mongoose.Schema.Types.Mixed, default: null },
     lastCardId: { type: mongoose.Schema.Types.ObjectId, ref: 'Flashcard', default: null },
     lastGraded: { type: mongoose.Schema.Types.Mixed, default: null }, // Phục vụ override
     stats: {
