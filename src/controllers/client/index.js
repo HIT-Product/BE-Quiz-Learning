@@ -8,6 +8,7 @@ import learnController from './learn.controller.js'
 import studyController from './study.controller.js'
 import learnSessionController from './learnSession.controller.js'
 import studyRoomController from './studyRoom.controller.js'
+import dashboardController from './dashboard.controller.js'
 
 export {
   userController,
@@ -19,5 +20,6 @@ export {
   learnController,
   studyController,
   learnSessionController,
-  studyRoomController
+  studyRoomController,
+  dashboardController
 }

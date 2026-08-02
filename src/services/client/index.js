@@ -9,6 +9,8 @@ import studyService from './study.service.js'
 import learnSessionService from './learnSession.service.js'
 import studyRoomService from './studyRoom.service.js'
 import roomMediaService from './roomMedia.service.js'
+import studyActivityService from './studyActivity.service.js'
+import dashboardService from './dashboard.service.js'
 
 export {
   userService,
@@ -21,5 +23,7 @@ export {
   studyService,
   learnSessionService,
   studyRoomService,
-  roomMediaService
+  roomMediaService,
+  studyActivityService,
+  dashboardService
 }

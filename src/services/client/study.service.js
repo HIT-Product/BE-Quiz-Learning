@@ -3,8 +3,9 @@ import { StatusCodes } from 'http-status-codes'
 import { DECK_VISIBILITY, LEARNING_STATUS } from '../../constants/index.js'
 import { deckModel, flashcardModel, cardProgressModel } from '../../models/index.js'
 import { ApiError } from '../../utils/index.js'
+import { STUDY_ACTIVITY_SOURCE, recordStudyActivity } from './studyActivity.service.js'
 
-// Kiểm tra quyền truy cập deck
+// Kiểm tra quyền truy cập deck.
 const getAccessibleDeck = async (deckId, userId) => {
   const deck = await deckModel.findById(deckId)
   if (!deck) {
@@ -17,7 +18,7 @@ const getAccessibleDeck = async (deckId, userId) => {
   return deck
 }
 
-// Bắt đầu phiên lật thẻ
+// Bắt đầu phiên lật thẻ.
 const startSession = async (deckId, userId, filter = 'all') => {
   await getAccessibleDeck(deckId, userId)
 
@@ -49,7 +50,7 @@ const startSession = async (deckId, userId, filter = 'all') => {
   return { deckId, filter, summary, sessionSize: items.length, cards: items }
 }
 
-// Đánh dấu kết quả lật thẻ
+// Ghi nhận kết quả review thẻ.
 const reviewCard = async (deckId, cardId, userId, remembered) => {
   await getAccessibleDeck(deckId, userId)
 
@@ -59,16 +60,19 @@ const reviewCard = async (deckId, cardId, userId, remembered) => {
   }
 
   const status = remembered ? LEARNING_STATUS.REMEMBERED : LEARNING_STATUS.LEARNING
+  const reviewedAt = new Date()
 
   const progress = await cardProgressModel.findOneAndUpdate(
     { userId, flashcardId: cardId },
     {
-      $set: { status, lastReviewedAt: new Date() },
+      $set: { status, lastReviewedAt: reviewedAt },
       $inc: { reviewCount: 1 },
       $setOnInsert: { userId, flashcardId: cardId }
     },
     { new: true, upsert: true }
   )
+
+  await recordStudyActivity(userId, STUDY_ACTIVITY_SOURCE.CARD_REVIEW, reviewedAt)
 
   return progress
 }
