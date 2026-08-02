@@ -295,6 +295,33 @@ Luong dang ky hien tai dung OTP email:
 | GET | `/decks/:deckId/learn` | Bearer token | Sinh vòng câu hỏi thích ứng |
 | POST | `/decks/:deckId/learn/answer` | Bearer token | Chấm câu trả lời, cập nhật tiến độ |
 
+### Dashboard
+
+| Method | Endpoint | Xác thực | Chức năng |
+| --- | --- | --- | --- |
+| GET | `/dashboard` | Bearer token | Lấy tổng quan học tập và chuỗi ngày học của user hiện tại |
+
+Response trả thêm `studyStreak`:
+
+```json
+{
+  "statusCode": 200,
+  "message": "Lấy tổng quan học tập thành công.",
+  "data": {
+    "studyStreak": {
+      "currentDays": 6,
+      "longestDays": 18,
+      "lastStudyDate": "2026-07-29",
+      "timezone": "Asia/Ho_Chi_Minh"
+    }
+  }
+}
+```
+
+Một ngày học được ghi nhận sau khi review thẻ, trả lời trong learn session, nộp quiz hoặc phát sinh thời gian học hợp lệ trong phòng học. Nhiều hoạt động trong cùng ngày chỉ tính một ngày. Nếu ngày học gần nhất là hôm qua thì chuỗi hiện tại vẫn được giữ; nếu cũ hơn hôm qua thì `currentDays` bằng `0`.
+
+Thiết kế và contract đầy đủ xem tại [`docs/dashboard.md`](docs/dashboard.md). OpenAPI nằm trong [`swagger/swagger.json`](swagger/swagger.json).
+
 ## Ví dụ gọi API
 
 ```js

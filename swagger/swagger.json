@@ -1,0 +1,1416 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "HITProduct API",
+    "version": "1.0.0",
+    "description": "Tai lieu OpenAPI doc lap cho Quiz Learning API."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api/v1",
+      "description": "Local development"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Dang ky, dang nhap va quan ly phien"
+    },
+    {
+      "name": "Users",
+      "description": "Thong tin tai khoan hien tai"
+    },
+    {
+      "name": "Folders",
+      "description": "Quan ly thu muc bo the"
+    },
+    {
+      "name": "Decks",
+      "description": "Quan ly va tim kiem bo the"
+    },
+    {
+      "name": "Flashcards",
+      "description": "Quan ly va import the hoc"
+    },
+    {
+      "name": "Quiz",
+      "description": "Tao va nop bai quiz"
+    },
+    {
+      "name": "Learn",
+      "description": "Hoc theo vong va phien co the tiep tuc"
+    },
+    {
+      "name": "Study",
+      "description": "On tap theo lich"
+    },
+    {
+      "name": "Study Rooms",
+      "description": "Phong hoc thoi gian thuc"
+    },
+    {
+      "name": "Dashboard",
+      "description": "Tong quan hoc tap ca nhan va study streak"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Gui OTP dang ky",
+        "operationId": "requestRegisterOtp",
+        "security": [],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/auth/register/verify-otp": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Xac thuc OTP va tao tai khoan",
+        "operationId": "verifyRegisterOtp",
+        "security": [],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Created"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/auth/register/resend-otp": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Gui lai OTP dang ky",
+        "operationId": "resendRegisterOtp",
+        "security": [],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Dang nhap",
+        "operationId": "login",
+        "security": [],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/refresh-token": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Lam moi access token",
+        "operationId": "refreshToken",
+        "security": [
+          {
+            "refreshTokenCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Dang xuat phien hien tai",
+        "operationId": "logout",
+        "security": [
+          {
+            "refreshTokenCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/auth/logout-all": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Dang xuat tat ca thiet bi",
+        "operationId": "logoutAll",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/change-password": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Doi mat khau",
+        "operationId": "changePassword",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Gui OTP quen mat khau",
+        "operationId": "forgotPassword",
+        "security": [],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/auth/forgot-password/resend": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Gui lai OTP quen mat khau",
+        "operationId": "resendForgotPasswordOtp",
+        "security": [],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Dat lai mat khau",
+        "operationId": "resetPassword",
+        "security": [],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/auth/google": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Bat dau dang nhap Google",
+        "operationId": "googleLogin",
+        "security": [],
+        "responses": {
+          "302": {
+            "description": "Chuyen huong den Google OAuth"
+          }
+        }
+      }
+    },
+    "/auth/google-callback": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Google OAuth callback",
+        "operationId": "googleCallback",
+        "security": [],
+        "responses": {
+          "302": {
+            "description": "Chuyen huong sau khi xac thuc"
+          }
+        }
+      }
+    },
+    "/users/me": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Lay ho so hien tai",
+        "operationId": "getMe",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Cap nhat ho so hien tai",
+        "operationId": "updateMe",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/folders": {
+      "get": {
+        "tags": [
+          "Folders"
+        ],
+        "summary": "Liet ke thu muc",
+        "operationId": "listFolders",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Folders"
+        ],
+        "summary": "Tao thu muc",
+        "operationId": "createFolder",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Created"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/folders/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Folders"
+        ],
+        "summary": "Lay chi tiet thu muc",
+        "operationId": "getFolderById",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Folders"
+        ],
+        "summary": "Cap nhat thu muc",
+        "operationId": "updateFolder",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Folders"
+        ],
+        "summary": "Xoa thu muc",
+        "operationId": "deleteFolder",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks": {
+      "get": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Liet ke bo the cua toi",
+        "operationId": "listDecks",
+        "parameters": [
+          {
+            "name": "folderId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Loc theo thu muc"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Tao bo the",
+        "operationId": "createDeck",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Created"
+          }
+        }
+      }
+    },
+    "/decks/public": {
+      "get": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Tim kiem bo the cong khai",
+        "operationId": "listPublicDecks",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "description": "Tu khoa tim kiem"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "popular"
+              ],
+              "default": "newest"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Lay chi tiet bo the",
+        "operationId": "getDeckById",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Cap nhat bo the",
+        "operationId": "updateDeck",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Xoa bo the",
+        "operationId": "deleteDeck",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{id}/copy": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Sao chep bo the",
+        "operationId": "copyDeck",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/cards": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Flashcards"
+        ],
+        "summary": "Liet ke the hoc",
+        "operationId": "listFlashcards",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Flashcards"
+        ],
+        "summary": "Tao the hoc",
+        "operationId": "createFlashcard",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Created"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/cards/reorder": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "put": {
+        "tags": [
+          "Flashcards"
+        ],
+        "summary": "Sap xep lai the hoc",
+        "operationId": "reorderFlashcards",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/cards/import/preview": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Flashcards"
+        ],
+        "summary": "Xem truoc du lieu import",
+        "operationId": "previewFlashcardImport",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/cards/import": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Flashcards"
+        ],
+        "summary": "Import the tu CSV hoac TSV",
+        "operationId": "importFlashcards",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/cards/{cardId}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        },
+        {
+          "$ref": "#/components/parameters/CardId"
+        }
+      ],
+      "put": {
+        "tags": [
+          "Flashcards"
+        ],
+        "summary": "Cap nhat the hoc",
+        "operationId": "updateFlashcard",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Flashcards"
+        ],
+        "summary": "Xoa the hoc",
+        "operationId": "deleteFlashcard",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/quiz": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Quiz"
+        ],
+        "summary": "Tao quiz",
+        "operationId": "generateQuiz",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/quiz/submit": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Quiz"
+        ],
+        "summary": "Nop ket qua quiz",
+        "operationId": "submitQuiz",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/learn": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Learn"
+        ],
+        "summary": "Lay vong hoc hien tai",
+        "operationId": "getLearnRound",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/learn/answer": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Learn"
+        ],
+        "summary": "Tra loi trong vong hoc",
+        "operationId": "answerLearnRound",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/learn/session": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Learn"
+        ],
+        "summary": "Lay phien hoc hien tai",
+        "operationId": "getCurrentLearnSession",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Learn"
+        ],
+        "summary": "Bat dau phien hoc",
+        "operationId": "startLearnSession",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Created"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/learn/session/answer": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Learn"
+        ],
+        "summary": "Tra loi trong phien hoc",
+        "operationId": "answerLearnSession",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/learn/session/override": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Learn"
+        ],
+        "summary": "Ghi de phien hoc hien tai",
+        "operationId": "overrideLearnSession",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/learn/session/reset": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Learn"
+        ],
+        "summary": "Dat lai phien hoc",
+        "operationId": "resetLearnSession",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/study": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Study"
+        ],
+        "summary": "Bat dau phien on tap",
+        "operationId": "startStudySession",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/study/cards/{cardId}/review": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        },
+        {
+          "$ref": "#/components/parameters/CardId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Study"
+        ],
+        "summary": "Ghi nhan ket qua on tap",
+        "operationId": "reviewStudyCard",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/dashboard": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Lay tong quan hoc tap ca nhan",
+        "description": "Tra so lieu Dashboard va chuoi ngay hoc theo timezone Asia/Ho_Chi_Minh.",
+        "operationId": "getDashboardOverview",
+        "responses": {
+          "200": {
+            "description": "Lay Dashboard thanh cong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/study-rooms": {
+      "get": {
+        "tags": [
+          "Study Rooms"
+        ],
+        "summary": "Liet ke phong hoc",
+        "operationId": "listStudyRooms",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Study Rooms"
+        ],
+        "summary": "Tao phong hoc",
+        "operationId": "createStudyRoom",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Created"
+          },
+          "429": {
+            "description": "Tao phong qua nhanh"
+          }
+        }
+      }
+    },
+    "/study-rooms/join": {
+      "post": {
+        "tags": [
+          "Study Rooms"
+        ],
+        "summary": "Tham gia phong bang ma",
+        "operationId": "joinStudyRoom",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "429": {
+            "description": "Thu ma phong qua nhanh"
+          }
+        }
+      }
+    },
+    "/study-rooms/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Study Rooms"
+        ],
+        "summary": "Lay chi tiet phong hoc",
+        "operationId": "getStudyRoomById",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/study-rooms/{id}/messages": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Study Rooms"
+        ],
+        "summary": "Lay lich su tin nhan",
+        "operationId": "listStudyRoomMessages",
+        "parameters": [
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Cursor thoi gian"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/study-rooms/{id}/leaderboard": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Study Rooms"
+        ],
+        "summary": "Lay bang xep hang",
+        "operationId": "getStudyRoomLeaderboard",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/study-rooms/{id}/media-token": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Study Rooms"
+        ],
+        "summary": "Tao LiveKit media token",
+        "operationId": "createStudyRoomMediaToken",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/study-rooms/{id}/close": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Study Rooms"
+        ],
+        "summary": "Dong phong hoc",
+        "operationId": "closeStudyRoom",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "refreshTokenCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "refreshToken"
+      }
+    },
+    "parameters": {
+      "Id": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "DeckId": {
+        "name": "deckId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "CardId": {
+        "name": "cardId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Page": {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "default": 20
+        }
+      }
+    },
+    "requestBodies": {
+      "JsonBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "example": {}
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "example": 200
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "nullable": true
+          }
+        },
+        "additionalProperties": true
+      },
+      "StudyStreak": {
+        "type": "object",
+        "properties": {
+          "currentDays": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 6
+          },
+          "longestDays": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 18
+          },
+          "lastStudyDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "example": "2026-07-29"
+          },
+          "timezone": {
+            "type": "string",
+            "enum": [
+              "Asia/Ho_Chi_Minh"
+            ]
+          }
+        },
+        "required": [
+          "currentDays",
+          "longestDays",
+          "lastStudyDate",
+          "timezone"
+        ]
+      },
+      "DashboardResponse": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "Lay tong quan hoc tap thanh cong."
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "stats": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "studyStreak": {
+                "$ref": "#/components/schemas/StudyStreak"
+              },
+              "progressByStatus": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer"
+                }
+              },
+              "recentDecks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "recentAttempts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            },
+            "required": [
+              "stats",
+              "studyStreak",
+              "progressByStatus",
+              "recentDecks",
+              "recentAttempts"
+            ]
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "data"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "example": 400
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "responses": {
+      "Success": {
+        "description": "Thanh cong",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiResponse"
+            }
+          }
+        }
+      },
+      "Created": {
+        "description": "Tao moi thanh cong",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiResponse"
+            }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Du lieu khong hop le",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Chua xac thuc hoac token khong hop le",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Khong tim thay tai nguyen",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  }
+}

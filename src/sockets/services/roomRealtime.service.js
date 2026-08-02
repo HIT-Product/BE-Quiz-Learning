@@ -6,6 +6,7 @@ import { logger } from '../../utils/index.js'
 import { socketError } from '../utils/socketHandler.js'
 import { studyRoomModel, roomParticipantModel, roomMessageModel, pomodoroSessionModel } from '../../models/index.js'
 import { roomMediaService, studyRoomService } from '../../services/client/index.js'
+import { STUDY_ACTIVITY_SOURCE, recordStudyActivity } from '../../services/client/studyActivity.service.js'
 import { serializePomodoroState } from '../contracts/pomodoro.contract.js'
 import {
   ROOM_REDIS_KEY,
@@ -52,6 +53,7 @@ const settleStudyTime = async (roomId, userId) => {
   const deltaSec = Math.min(Math.max(0, rawDelta), ROOM_LIMITS.WORK_MAX * 60)
   if (deltaSec > 0) {
     await redisClient.zincrby(ROOM_REDIS_KEY.LEADERBOARD(roomId), deltaSec, String(userId))
+    await recordStudyActivity(userId, STUDY_ACTIVITY_SOURCE.STUDY_ROOM)
   }
   return deltaSec
 }
