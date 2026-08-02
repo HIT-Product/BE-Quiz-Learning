@@ -15,6 +15,7 @@ const round = {
       .max(QUESTION_LIMITS.LEARN_MAX_LIMIT)
       .default(QUESTION_LIMITS.DEFAULT_LEARN_LIMIT),
     onlyUnlearned: Joi.boolean().default(true),
+    includeFlashcard: Joi.boolean().default(true),
     types: Joi.string()
   })
 }

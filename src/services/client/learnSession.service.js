@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { deckModel, flashcardModel, cardProgressModel, learnSessionModel } from '../../models/index.js'
 import { ApiError } from '../../utils/index.js'
-import { matchAnswer, isCloseAnswer } from '../../utils/quiz.js'
+import { matchAnswer, isCloseAnswer, normalize } from '../../utils/quiz.js'
 import { buildMultipleChoice, buildTrueFalse, buildWritten, buildFlashcard, viewCard } from './question.service.js'
 import { STUDY_ACTIVITY_SOURCE, recordStudyActivity } from './studyActivity.service.js'
 import {
@@ -18,7 +18,14 @@ import {
   WRITTEN_GRADE_MODE
 } from '../../constants/index.js'
 
-const LADDER = [QUESTION_TYPE.TRUE_FALSE, QUESTION_TYPE.MULTIPLE_CHOICE, QUESTION_TYPE.WRITTEN]
+const LADDER = [QUESTION_TYPE.MULTIPLE_CHOICE, QUESTION_TYPE.TRUE_FALSE, QUESTION_TYPE.WRITTEN]
+
+const hasMultipleChoiceDistractor = (card, allCards) => {
+  const correct = normalize(card.back)
+  return [...(card.distractors || []), ...allCards.filter((other) => !other._id.equals(card._id)).map((other) => other.back)]
+    .map(normalize)
+    .some((answer) => answer && answer !== correct)
+}
 
 const MODE_DEFAULTS = {
   [LEARN_SESSION_MODE.CRAM]: {
@@ -66,6 +73,7 @@ const buildConfig = (mode, input = {}) => {
     sessionLimit: input.sessionLimit || null,
     scope: input.scope || LEARN_SCOPE.ALL,
     writtenGradeMode: input.writtenGradeMode || WRITTEN_GRADE_MODE.MODERATE,
+    retypeWrongAnswers: input.retypeWrongAnswers === true,
     timeTargetMin: input.timeTargetMin || null
   }
 }
@@ -351,6 +359,15 @@ const masteryProgress = (session) => {
   return { mastered, total: session.cards.length }
 }
 
+const presentRetype = (pendingRetype) =>
+  pendingRetype
+    ? {
+        required: true,
+        flashcardId: pendingRetype.flashcardId,
+        correctAnswer: pendingRetype.correctAnswer
+      }
+    : null
+
 const present = (session, cmap) => ({
   sessionId: session._id,
   mode: session.mode,
@@ -358,7 +375,8 @@ const present = (session, cmap) => ({
   status: session.status,
   progress: masteryProgress(session),
   block: blockInfo(session),
-  current: stripCorrect(session.current)
+  current: stripCorrect(session.current),
+  retype: presentRetype(session.pendingRetype)
 })
 
 const startOrResume = async (deckId, userId, { mode = LEARN_SESSION_MODE.MASTER, config } = {}) => {
@@ -384,6 +402,12 @@ const startOrResume = async (deckId, userId, { mode = LEARN_SESSION_MODE.MASTER,
   const needsMcOrTf = cfg.types.includes(QUESTION_TYPE.MULTIPLE_CHOICE) || cfg.types.includes(QUESTION_TYPE.TRUE_FALSE)
   if (needsMcOrTf && pool.length < LEARN_SESSION_LIMITS.MIN_CARDS_FOR_MC_OR_TF) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Can it nhat 2 the cho dang trac nghiem hoac dung/sai.')
+  }
+  if (
+    cfg.types.includes(QUESTION_TYPE.MULTIPLE_CHOICE) &&
+    pool.some((card) => !hasMultipleChoiceDistractor(card, cards))
+  ) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Moi the can it nhat mot dap an nhieu khac biet cho dang trac nghiem.')
   }
 
   const cmap = { all: cards, byId: new Map(cards.map((c) => [c._id.toString(), c])) }
@@ -428,6 +452,7 @@ const answer = async (deckId, userId, payload) => {
   await getAccessibleDeck(deckId, userId)
   const session = await learnSessionModel.findOne({ userId, deckId, status: LEARN_SESSION_STATUS.IN_PROGRESS })
   if (!session) throw new ApiError(StatusCodes.NOT_FOUND, 'Khong co phien hoc dang chay.')
+  if (session.pendingRetype) throw new ApiError(StatusCodes.BAD_REQUEST, 'Can go lai dap an dung truoc khi tiep tuc.')
   if (!session.current) throw new ApiError(StatusCodes.BAD_REQUEST, 'Khong co cau hoi dang cho.')
 
   if (payload.flashcardId && payload.flashcardId !== session.current.flashcardId) {
@@ -435,6 +460,7 @@ const answer = async (deckId, userId, payload) => {
   }
 
   const cs = session.cards.find((c) => c.flashcardId.toString() === session.current.flashcardId)
+  const questionType = session.current.type
   const result = grade(session, payload)
 
   const stageBefore = cs.stage
@@ -455,6 +481,11 @@ const answer = async (deckId, userId, payload) => {
 
   activateCards(session)
   const done = session.cards.every((c) => c.mastered)
+  const retypeRequired =
+    session.config.retypeWrongAnswers === true &&
+    questionType !== QUESTION_TYPE.FLASHCARD &&
+    [LEARN_OUTCOME.WRONG, LEARN_OUTCOME.DONTKNOW].includes(result.outcome) &&
+    result.correctAnswer != null
 
   let summary = null
   if (done) {
@@ -462,12 +493,19 @@ const answer = async (deckId, userId, payload) => {
     session.completedAt = new Date()
     session.current = null
     summary = buildSummary(session, cmap.byId)
+  } else if (retypeRequired) {
+    session.pendingRetype = {
+      flashcardId: cs.flashcardId.toString(),
+      correctAnswer: result.correctAnswer
+    }
+    session.current = null
   } else {
     issueNext(session, cmap)
   }
 
   // Mongoose không tự nhận thay đổi của Mixed fields.
   session.markModified('current')
+  session.markModified('pendingRetype')
   session.markModified('lastGraded')
   await session.save()
   await recordStudyActivity(userId, STUDY_ACTIVITY_SOURCE.LEARN_SESSION)
@@ -481,8 +519,53 @@ const answer = async (deckId, userId, payload) => {
     mastered: cs.mastered,
     progress: masteryProgress(session),
     block: blockInfo(session),
+    retypeRequired,
+    retype: presentRetype(session.pendingRetype),
     next: stripCorrect(session.current),
     summary
+  }
+}
+
+const retype = async (deckId, userId, payload) => {
+  await getAccessibleDeck(deckId, userId)
+  const session = await learnSessionModel.findOne({ userId, deckId, status: LEARN_SESSION_STATUS.IN_PROGRESS })
+  if (!session) throw new ApiError(StatusCodes.NOT_FOUND, 'Khong co phien hoc dang chay.')
+
+  const pending = session.pendingRetype
+  if (!pending) throw new ApiError(StatusCodes.BAD_REQUEST, 'Khong co dap an nao dang cho go lai.')
+  if (payload.flashcardId !== pending.flashcardId) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'The go lai khong khop dap an dang cho.')
+  }
+
+  const accepted = matchAnswer(payload.typedAnswer, pending.correctAnswer)
+  if (!accepted) {
+    return {
+      accepted: false,
+      retypeRequired: true,
+      retype: presentRetype(pending),
+      next: null
+    }
+  }
+
+  session.pendingRetype = null
+  if (session.lastGraded) session.lastGraded.retypeCompleted = true
+
+  const cmap = await cardsMap(deckId)
+  activateCards(session)
+  issueNext(session, cmap)
+
+  session.markModified('pendingRetype')
+  session.markModified('lastGraded')
+  session.markModified('current')
+  await session.save()
+
+  return {
+    accepted: true,
+    retypeRequired: false,
+    progress: masteryProgress(session),
+    block: blockInfo(session),
+    retype: null,
+    next: stripCorrect(session.current)
   }
 }
 
@@ -492,7 +575,7 @@ const override = async (deckId, userId) => {
   if (!session) throw new ApiError(StatusCodes.NOT_FOUND, 'Khong co phien hoc dang chay.')
 
   const lg = session.lastGraded
-  if (!lg || lg.outcome === LEARN_OUTCOME.CORRECT) {
+  if (!lg || lg.outcome === LEARN_OUTCOME.CORRECT || lg.retypeCompleted) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Khong co cau vua cham sai de ghi nhan dung.')
   }
 
@@ -505,26 +588,40 @@ const override = async (deckId, userId) => {
 
   applyOutcome(session, cs, LEARN_OUTCOME.CORRECT)
   lg.outcome = LEARN_OUTCOME.CORRECT
+  if (session.pendingRetype?.flashcardId === lg.flashcardId) session.pendingRetype = null
 
   if (cs.mastered) await syncProgress(userId, cs.flashcardId, LEARNING_STATUS.REMEMBERED)
 
+  const cmap = await cardsMap(deckId)
   const done = session.cards.every((c) => c.mastered)
   if (done) {
     session.status = LEARN_SESSION_STATUS.COMPLETED
     session.completedAt = new Date()
     session.current = null
+  } else if (!session.current) {
+    activateCards(session)
+    issueNext(session, cmap)
   }
 
+  session.markModified('current')
+  session.markModified('pendingRetype')
   session.markModified('lastGraded')
   await session.save()
-  return present(session, await cardsMap(deckId))
+  return present(session, cmap)
 }
 
-const reset = async (deckId, userId, { restart = false, mode, config } = {}) => {
+const reset = async (deckId, userId, { restart = false, resetProgress = false, mode, config } = {}) => {
   await getAccessibleDeck(deckId, userId)
   await learnSessionModel.deleteOne({ userId, deckId, status: LEARN_SESSION_STATUS.IN_PROGRESS })
-  if (restart) return startOrResume(deckId, userId, { mode, config })
-  return { reset: true }
+  if (resetProgress) {
+    const flashcardIds = await flashcardModel.distinct('_id', { deckId })
+    await cardProgressModel.deleteMany({ userId, flashcardId: { $in: flashcardIds } })
+  }
+  if (restart) {
+    const session = await startOrResume(deckId, userId, { mode, config })
+    return { ...session, progressReset: resetProgress }
+  }
+  return { reset: true, progressReset: resetProgress }
 }
 
-export default { startOrResume, getCurrent, answer, override, reset }
+export default { startOrResume, getCurrent, answer, retype, override, reset }
