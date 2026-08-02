@@ -103,12 +103,65 @@ Mặc định:
 - Server: `http://localhost:3000`
 - API base URL: `http://localhost:3000/api/v1`
 
+## Chạy bằng Docker
+
+Project có hai cấu hình:
+
+- `compose.yaml`: build source và chạy local.
+- `compose.prod.yaml`: pull image đã publish, không cần source code hoặc `npm install`.
+
+Chuẩn bị môi trường:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Nếu MongoDB chạy trên máy host, khi API chạy trong Docker hãy đặt:
+
+```env
+MONGO_URI=mongodb://host.docker.internal:27017/quiz-learning
+```
+
+Chạy toàn bộ API, worker và Redis local:
+
+```bash
+docker compose up -d --build
+docker compose ps
+docker compose logs -f api worker redis
+```
+
+Chỉ chạy Redis để API/worker tiếp tục chạy bằng npm hoặc PM2:
+
+```bash
+docker compose up -d redis
+```
+
+### Publish và chạy image production
+
+Build và push image lên Docker Hub:
+
+```bash
+docker login
+docker build -t vanphuoc0443/hitproduct-api:latest .
+docker push vanphuoc0443/hitproduct-api:latest
+```
+
+Máy nhận chỉ cần `compose.prod.yaml` và `.env`. Trong `.env`, đặt `HITPRODUCT_IMAGE`, `MONGO_URI`, `REDIS_PASSWORD` và các secret ứng dụng, sau đó chạy:
+
+```bash
+docker compose -f compose.prod.yaml pull
+docker compose -f compose.prod.yaml up -d
+docker compose -f compose.prod.yaml ps
+```
+
+Không commit hoặc chia sẻ file `.env` thật. Xem hướng dẫn chi tiết tại [docs/docker.md](./docs/docker.md).
+
 ## Chạy production bằng PM2
 
 Project có sẵn [ecosystem.config.cjs](./ecosystem.config.cjs) để quản lý hai tiến trình:
 
-- `api`: 2 instance chạy cluster
-- `worker`: 2 instance chạy fork để xử lý hàng đợi email
+- `api`: 1 instance cluster, tự restart khi vượt 300 MB
+- `worker`: 1 instance fork, tự restart khi vượt 150 MB
 
 Cài PM2 toàn cục:
 
