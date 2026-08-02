@@ -2394,67 +2394,11 @@
       ]
     },
     {
-      "name": "Learn Session - Recommended",
-      "description": "Luồng test: 00 (một lần để test sạch) → 03 lặp lại. Khi 03 trả retypeRequired=true, chọn đúng một trong 04A hoặc 04B rồi quay lại 03. Bước 02 chỉ đọc trạng thái; bước 99 kết thúc session. Không gọi request Legacy trong cùng lượt test.",
+      "name": "Learn",
+      "description": "Luồng chính: 1. Start Learn → 2. Answer lặp lại. Nếu trả lời sai và retypeRequired=true, chạy 3. Retype rồi quay lại bước 2.",
       "item": [
         {
-          "name": "00 - Reset & Restart Fresh Session",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
-              }
-            ],
-            "url": "{{baseUrl}}/decks/{{deckId}}/learn/session/reset",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"restart\": true,\n  \"resetProgress\": true,\n  \"mode\": \"master\",\n  \"config\": {\n    \"types\": [\n      \"multiple_choice\",\n      \"true_false\",\n      \"written\"\n    ],\n    \"answerSide\": \"front\",\n    \"writtenGradeMode\": \"moderate\",\n    \"retypeWrongAnswers\": true\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "description": "Bắt đầu lượt test sạch: xóa session, reset CardProgress của deck và tạo session mới với đủ 3 dạng câu hỏi. Chỉ dùng một lần ở đầu luồng."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                  "const data = pm.response.json().data || {};",
-                  "const q = data.current;",
-                  "if (q) {",
-                  "  const body = { flashcardId: q.flashcardId };",
-                  "  if (q.type === 'flashcard') body.known = true;",
-                  "  else if (q.type === 'multiple_choice') body.selectedAnswer = (q.options && q.options[0]) || '';",
-                  "  else if (q.type === 'true_false') body.selectedAnswer = 'true';",
-                  "  else body.selectedAnswer = 'xin chao';",
-                  "  pm.collectionVariables.set('learnSessionAnswerBody', JSON.stringify(body, null, 2));",
-                  "}",
-                  "if (data.retype) {",
-                  "  pm.collectionVariables.set('learnSessionRetypeBody', JSON.stringify({ flashcardId: data.retype.flashcardId, typedAnswer: data.retype.correctAnswer }, null, 2));",
-                  "}",
-                  "pm.test(\"Co session va buoc hien tai\", () => {",
-                  "  pm.expect(data).to.have.property('sessionId');",
-                  "  pm.expect(Boolean(q || data.retype)).to.eql(true);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "01 - Start or Resume Session",
+          "name": "1. Start Learn",
           "request": {
             "method": "POST",
             "header": [
@@ -2478,7 +2422,7 @@
                 }
               }
             },
-            "description": "Tạo session mới nếu chưa có; nếu đã có session active thì trả về session hiện tại. Thứ tự loại câu hỏi: multiple_choice → true_false → written."
+            "description": "Bắt đầu hoặc tiếp tục lượt học. Chỉ cần chạy request này một lần trước khi trả lời."
           },
           "event": [
             {
@@ -2510,47 +2454,7 @@
           ]
         },
         {
-          "name": "02 - Get Current Session (Optional)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
-              }
-            ],
-            "url": "{{baseUrl}}/decks/{{deckId}}/learn/session",
-            "description": "Chỉ đọc session hiện tại để đồng bộ UI/debug. Không tạo round và không thay đổi tiến độ."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                  "const data = pm.response.json().data || {};",
-                  "const q = data.current;",
-                  "if (q) {",
-                  "  const body = { flashcardId: q.flashcardId };",
-                  "  if (q.type === 'flashcard') body.known = true;",
-                  "  else if (q.type === 'multiple_choice') body.selectedAnswer = (q.options && q.options[0]) || '';",
-                  "  else if (q.type === 'true_false') body.selectedAnswer = 'true';",
-                  "  else body.selectedAnswer = 'xin chao';",
-                  "  pm.collectionVariables.set('learnSessionAnswerBody', JSON.stringify(body, null, 2));",
-                  "}",
-                  "if (data.retype) {",
-                  "  pm.collectionVariables.set('learnSessionRetypeBody', JSON.stringify({ flashcardId: data.retype.flashcardId, typedAnswer: data.retype.correctAnswer }, null, 2));",
-                  "}",
-                  "pm.test(\"Co cau hien tai hoac dang cho go lai\", () => pm.expect(Boolean(q || data.retype)).to.eql(true));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "03 - Answer Current Question",
+          "name": "2. Answer (repeat)",
           "request": {
             "method": "POST",
             "header": [
@@ -2574,7 +2478,7 @@
                 }
               }
             },
-            "description": "Gửi đáp án cho câu hỏi hiện tại. Lặp lại request này; nếu response có retypeRequired=true thì chạy 04A trước khi trả lời câu tiếp theo."
+            "description": "Trả lời câu hiện tại rồi chạy lại request này cho câu tiếp theo. Nếu response có retypeRequired=true thì chạy bước 3."
           },
           "event": [
             {
@@ -2611,7 +2515,7 @@
           ]
         },
         {
-          "name": "04A - Retype Correct Answer (when required)",
+          "name": "3. Retype if wrong",
           "request": {
             "method": "POST",
             "header": [
@@ -2635,7 +2539,7 @@
                 }
               }
             },
-            "description": "Chỉ gọi khi response bước 03 có retypeRequired=true. Nhập lại đáp án đúng để mở khóa câu tiếp theo."
+            "description": "Chỉ chạy khi bước 2 trả retypeRequired=true. Nhập lại đáp án đúng rồi quay lại bước 2."
           },
           "event": [
             {
@@ -2670,7 +2574,7 @@
           ]
         },
         {
-          "name": "04B - Override Last Wrong (alternative)",
+          "name": "Optional - Mark answer correct",
           "request": {
             "method": "POST",
             "header": [
@@ -2694,11 +2598,11 @@
                 }
               }
             },
-            "description": "Thay cho 04A: xác nhận đáp án vừa bị chấm sai thực ra là đúng. Không gọi cả 04A và 04B cho cùng một câu."
+            "description": "Dùng thay bước 3 khi hệ thống chấm nhầm. Sau đó quay lại bước 2."
           }
         },
         {
-          "name": "99 - Reset Session Only",
+          "name": "Optional - Start over",
           "request": {
             "method": "POST",
             "header": [
@@ -2715,359 +2619,38 @@
             "url": "{{baseUrl}}/decks/{{deckId}}/learn/session/reset",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"restart\": false,\n  \"resetProgress\": false\n}",
+              "raw": "{\n  \"restart\": true,\n  \"resetProgress\": true,\n  \"mode\": \"master\",\n  \"config\": {\n    \"types\": [\n      \"multiple_choice\",\n      \"true_false\",\n      \"written\"\n    ],\n    \"answerSide\": \"front\",\n    \"writtenGradeMode\": \"moderate\",\n    \"retypeWrongAnswers\": true\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "Kết thúc/xóa session active nhưng giữ nguyên CardProgress. Không tự tạo session mới."
+            "description": "Xóa tiến độ Learn của deck và bắt đầu lại từ đầu. Sau request này quay thẳng sang bước 2."
           },
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Reset session only succeeds', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json.data.reset).to.eql(true);",
-                  "  pm.expect(json.data.progressReset).to.eql(false);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Legacy Learn Round - Do Not Mix",
-      "description": "API cũ GET /learn và POST /learn/answer. Đây không phải LearnSession; chỉ dùng nếu client cũ còn phụ thuộc và tuyệt đối không trộn với luồng session.",
-      "item": [
-        {
-          "name": "LEGACY 01 - Build Round",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
-              }
-            ],
-            "url": "{{baseUrl}}/decks/{{deckId}}/learn?limit=10&onlyUnlearned=false&includeFlashcard={{learnIncludeFlashcard}}&types=multiple_choice,true_false,written",
-            "description": "Luồng Learn Round cũ, stateless theo từng round và dùng CardProgress. Không tạo LearnSession; không trộn với folder Learn Session - Recommended."
-          },
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const deckId = pm.collectionVariables.get('deckId');",
-                  "if (!deckId) { throw new Error('Thieu deckId. Hay chay Create Deck truoc de Postman luu {{deckId}}.'); }"
-                ]
-              }
-            },
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                  "",
-                  "const json = pm.response.json();",
-                  "const data = json.data || {};",
-                  "const questions = Array.isArray(data.questions) ? data.questions : [];",
-                  "const answerable = questions.filter((q) => ['multiple_choice', 'true_false', 'written'].includes(q.type));",
-                  "",
-                  "function answerBodyFor(q) {",
-                  "  if (!q) return null;",
-                  "  let selectedAnswer = \"\";",
-                  "  if (q.type === 'multiple_choice') selectedAnswer = (q.options && q.options[0]) || '';",
-                  "  if (q.type === 'true_false') selectedAnswer = 'true';",
-                  "  if (q.type === 'written') selectedAnswer = 'xin chao';",
-                  "  const body = {",
-                  "    flashcardId: q.flashcardId,",
-                  "    type: q.type,",
-                  "    selectedAnswer",
-                  "  };",
-                  "  if (q.type === 'true_false') body.statement = q.statement || '';",
-                  "  return body;",
+                  "const data = pm.response.json().data || {};",
+                  "const q = data.current;",
+                  "if (q) {",
+                  "  const body = { flashcardId: q.flashcardId };",
+                  "  if (q.type === 'flashcard') body.known = true;",
+                  "  else if (q.type === 'multiple_choice') body.selectedAnswer = (q.options && q.options[0]) || '';",
+                  "  else if (q.type === 'true_false') body.selectedAnswer = 'true';",
+                  "  else body.selectedAnswer = 'xin chao';",
+                  "  pm.collectionVariables.set('learnSessionAnswerBody', JSON.stringify(body, null, 2));",
                   "}",
-                  "",
-                  "const firstAnswerable = answerable[0];",
-                  "const multipleChoice = questions.find((q) => q.type === 'multiple_choice');",
-                  "const trueFalse = questions.find((q) => q.type === 'true_false');",
-                  "const written = questions.find((q) => q.type === 'written');",
-                  "",
-                  "const autoBody = answerBodyFor(firstAnswerable);",
-                  "if (autoBody) {",
-                  "  pm.collectionVariables.set('learnAnswerBody', JSON.stringify(autoBody, null, 2));",
-                  "  pm.collectionVariables.set('learnQuestionType', autoBody.type);",
-                  "  pm.collectionVariables.set('learnFlashcardId', autoBody.flashcardId);",
-                  "  pm.collectionVariables.set('learnSelectedAnswer', autoBody.selectedAnswer);",
-                  "  pm.collectionVariables.set('learnStatement', autoBody.statement || '');",
+                  "if (data.retype) {",
+                  "  pm.collectionVariables.set('learnSessionRetypeBody', JSON.stringify({ flashcardId: data.retype.flashcardId, typedAnswer: data.retype.correctAnswer }, null, 2));",
                   "}",
-                  "",
-                  "const mcBody = answerBodyFor(multipleChoice);",
-                  "if (mcBody) pm.collectionVariables.set(\"learnMultipleChoiceAnswerBody\", JSON.stringify(mcBody, null, 2));",
-                  "",
-                  "const tfBody = answerBodyFor(trueFalse);",
-                  "if (tfBody) pm.collectionVariables.set(\"learnTrueFalseAnswerBody\", JSON.stringify(tfBody, null, 2));",
-                  "",
-                  "const writtenBody = answerBodyFor(written);",
-                  "if (writtenBody) pm.collectionVariables.set(\"learnWrittenAnswerBody\", JSON.stringify(writtenBody, null, 2));",
-                  "",
-                  "pm.collectionVariables.set('learnQuestionPreview', JSON.stringify(questions, null, 2));",
-                  "",
-                  "console.log(\"learnAnswerBody da duoc tao. Chay Submit Learn Answer - Auto.\");",
-                  "console.log(pm.collectionVariables.get(\"learnAnswerBody\"));",
-                  "",
-                  "pm.test(\"Co questions\", () => {",
-                  "  pm.expect(questions).to.be.an(\"array\").that.is.not.empty;",
-                  "});",
-                  "",
-                  "pm.test(\"Co it nhat mot cau co the tra loi\", () => {",
-                  "  pm.expect(answerable).to.be.an(\"array\").that.is.not.empty;",
-                  "});",
-                  "",
-                  "pm.test(\"Khong lo correctAnswer trong questions\", () => {",
-                  "  for (const q of questions) {",
-                  "    pm.expect(q).to.not.have.property('correctAnswer');",
-                  "  }",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "LEGACY 02 - Submit Answer Auto",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
-              }
-            ],
-            "url": "{{baseUrl}}/decks/{{deckId}}/learn/answer",
-            "body": {
-              "mode": "raw",
-              "raw": "{{learnAnswerBody}}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "description": "Luồng Learn Round cũ, stateless theo từng round và dùng CardProgress. Không tạo LearnSession; không trộn với folder Learn Session - Recommended."
-          },
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const body = pm.collectionVariables.get('learnAnswerBody');",
-                  "if (!body) { throw new Error('Thieu learnAnswerBody. Hay chay Build Learn Round truoc.'); }",
-                  "try { JSON.parse(body); } catch (error) { throw new Error(`learnAnswerBody khong phai JSON hop le: ${error.message}`); }"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                  "",
-                  "const json = pm.response.json();",
-                  "const data = json.data || {};",
-                  "pm.test(\"Co ket qua cham learn\", () => {",
-                  "  pm.expect(data).to.have.property('isCorrect');",
-                  "  pm.expect(data).to.have.property('correctAnswer');",
-                  "  pm.expect(data).to.have.property('status');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "LEGACY 03 - Submit Multiple Choice",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
-              }
-            ],
-            "url": "{{baseUrl}}/decks/{{deckId}}/learn/answer",
-            "body": {
-              "mode": "raw",
-              "raw": "{{learnMultipleChoiceAnswerBody}}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "description": "Luồng Learn Round cũ, stateless theo từng round và dùng CardProgress. Không tạo LearnSession; không trộn với folder Learn Session - Recommended."
-          },
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const body = pm.collectionVariables.get('learnMultipleChoiceAnswerBody');",
-                  "if (!body) { throw new Error('Chua co cau multiple_choice. Hay chay Build Learn Round lai hoac them nhieu the hon.'); }"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                  "",
-                  "const json = pm.response.json();",
-                  "const data = json.data || {};",
-                  "pm.test(\"Co ket qua cham learn\", () => {",
-                  "  pm.expect(data).to.have.property('isCorrect');",
-                  "  pm.expect(data).to.have.property('correctAnswer');",
-                  "  pm.expect(data).to.have.property('status');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "LEGACY 04 - Submit True/False",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
-              }
-            ],
-            "url": "{{baseUrl}}/decks/{{deckId}}/learn/answer",
-            "body": {
-              "mode": "raw",
-              "raw": "{{learnTrueFalseAnswerBody}}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "description": "Luồng Learn Round cũ, stateless theo từng round và dùng CardProgress. Không tạo LearnSession; không trộn với folder Learn Session - Recommended."
-          },
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const body = pm.collectionVariables.get('learnTrueFalseAnswerBody');",
-                  "if (!body) { throw new Error('Chua co cau true_false. Hay chay Build Learn Round lai hoac them nhieu the hon.'); }"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                  "",
-                  "const json = pm.response.json();",
-                  "const data = json.data || {};",
-                  "pm.test(\"Co ket qua cham learn\", () => {",
-                  "  pm.expect(data).to.have.property('isCorrect');",
-                  "  pm.expect(data).to.have.property('correctAnswer');",
-                  "  pm.expect(data).to.have.property('status');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "LEGACY 05 - Submit Written",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
-              }
-            ],
-            "url": "{{baseUrl}}/decks/{{deckId}}/learn/answer",
-            "body": {
-              "mode": "raw",
-              "raw": "{{learnWrittenAnswerBody}}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "description": "Luồng Learn Round cũ, stateless theo từng round và dùng CardProgress. Không tạo LearnSession; không trộn với folder Learn Session - Recommended."
-          },
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const body = pm.collectionVariables.get('learnWrittenAnswerBody');",
-                  "if (!body) { throw new Error('Chua co cau written. Hay chay Build Learn Round lai hoac them nhieu the hon.'); }"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                  "",
-                  "const json = pm.response.json();",
-                  "const data = json.data || {};",
-                  "pm.test(\"Co ket qua cham learn\", () => {",
-                  "  pm.expect(data).to.have.property('isCorrect');",
-                  "  pm.expect(data).to.have.property('correctAnswer');",
-                  "  pm.expect(data).to.have.property('status');",
+                  "pm.test(\"Co session va buoc hien tai\", () => {",
+                  "  pm.expect(data).to.have.property('sessionId');",
+                  "  pm.expect(Boolean(q || data.retype)).to.eql(true);",
                   "});"
                 ]
               }
