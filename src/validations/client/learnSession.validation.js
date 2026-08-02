@@ -29,6 +29,7 @@ const configSchema = Joi.object({
     .max(LEARN_SESSION_LIMITS.SESSION_LIMIT_MAX),
   scope: Joi.string().valid(...Object.values(LEARN_SCOPE)),
   writtenGradeMode: Joi.string().valid(...Object.values(WRITTEN_GRADE_MODE)),
+  retypeWrongAnswers: Joi.boolean(),
   timeTargetMin: Joi.number()
     .integer()
     .min(LEARN_SESSION_LIMITS.TIME_TARGET_MIN)
@@ -63,13 +64,22 @@ const override = {
   params: Joi.object({ deckId: objectId.required() })
 }
 
+const retype = {
+  params: Joi.object({ deckId: objectId.required() }),
+  body: Joi.object({
+    flashcardId: objectId.required(),
+    typedAnswer: Joi.string().max(2000).required()
+  })
+}
+
 const reset = {
   params: Joi.object({ deckId: objectId.required() }),
   body: Joi.object({
     restart: Joi.boolean().default(false),
+    resetProgress: Joi.boolean().default(false),
     mode: Joi.string().valid(...Object.values(LEARN_SESSION_MODE)),
     config: configSchema
   })
 }
 
-export default { start, current, answer, override, reset }
+export default { start, current, answer, retype, override, reset }

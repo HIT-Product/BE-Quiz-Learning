@@ -21,6 +21,12 @@ const answer = catchAsync(async (req, res) => {
   res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Cham cau tra loi thanh cong.', data))
 })
 
+// [POST] /decks/:deckId/learn/session/retype
+const retype = catchAsync(async (req, res) => {
+  const data = await learnSessionService.retype(req.params.deckId, req.user._id, req.body)
+  res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Go lai dap an thanh cong.', data))
+})
+
 // [POST] /decks/:deckId/learn/session/override
 const override = catchAsync(async (req, res) => {
   const data = await learnSessionService.override(req.params.deckId, req.user._id)
@@ -33,4 +39,4 @@ const reset = catchAsync(async (req, res) => {
   res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Da dat lai phien hoc.', data))
 })
 
-export default { start, current, answer, override, reset }
+export default { start, current, answer, retype, override, reset }

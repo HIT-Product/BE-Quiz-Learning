@@ -294,6 +294,48 @@ Luong dang ky hien tai dung OTP email:
 | --- | --- | --- | --- |
 | GET | `/decks/:deckId/learn` | Bearer token | Sinh vòng câu hỏi thích ứng |
 | POST | `/decks/:deckId/learn/answer` | Bearer token | Chấm câu trả lời, cập nhật tiến độ |
+| POST | `/decks/:deckId/learn/session` | Bearer token | Bắt đầu hoặc tiếp tục Learn Session |
+| GET | `/decks/:deckId/learn/session` | Bearer token | Lấy câu hỏi và tiến độ phiên hiện tại |
+| POST | `/decks/:deckId/learn/session/answer` | Bearer token | Chấm câu hiện tại và phát bước tiếp theo |
+| POST | `/decks/:deckId/learn/session/retype` | Bearer token | Gõ lại đáp án đúng sau một câu sai |
+| POST | `/decks/:deckId/learn/session/override` | Bearer token | Ghi nhận câu vừa bị chấm sai là đúng |
+| POST | `/decks/:deckId/learn/session/reset` | Bearer token | Reset phiên và tùy chọn reset tiến độ card |
+
+Frontend nên dùng trọn bộ Learn Session, không gọi Legacy `GET /learn` sau khi reset Session. Cấu hình mẫu:
+
+```json
+{
+  "mode": "master",
+  "config": {
+    "types": ["multiple_choice", "true_false", "written"],
+    "answerSide": "front",
+    "writtenGradeMode": "moderate",
+    "retypeWrongAnswers": true
+  }
+}
+```
+
+- Thứ tự mastery: `multiple_choice` → `true_false` → `written`.
+- `answerSide: "front"`: hỏi mặt trước, trả lời mặt sau.
+- `answerSide: "back"`: hỏi mặt sau, trả lời mặt trước.
+- Khi `retypeWrongAnswers` bật và trả lời sai, response có `retypeRequired: true`; FE gọi `/session/retype` với `flashcardId` và `typedAnswer` trước khi sang câu tiếp theo.
+- `/session/override` chỉ dùng ngay sau câu bị chấm sai và trước khi hoàn tất retype.
+
+Reset và bắt đầu lại toàn bộ tiến độ Learn trong deck:
+
+```json
+{
+  "restart": true,
+  "resetProgress": true,
+  "mode": "master",
+  "config": {
+    "types": ["multiple_choice", "true_false", "written"],
+    "retypeWrongAnswers": true
+  }
+}
+```
+
+`resetProgress: true` xóa `CardProgress` của user trong deck; dữ liệu này dùng chung với Study và Quiz nên FE phải yêu cầu người dùng xác nhận trước khi reset.
 
 ### Dashboard
 

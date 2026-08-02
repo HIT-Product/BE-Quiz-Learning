@@ -773,6 +773,17 @@
         ],
         "summary": "Lay vong hoc hien tai",
         "operationId": "getLearnRound",
+        "parameters": [
+          {
+            "name": "includeFlashcard",
+            "in": "query",
+            "description": "Bat hoac tat cau hoi lat the cho the moi.",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/components/responses/Success"
@@ -827,11 +838,63 @@
         "summary": "Bat dau phien hoc",
         "operationId": "startLearnSession",
         "requestBody": {
-          "$ref": "#/components/requestBodies/JsonBody"
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "master",
+                      "cram"
+                    ]
+                  },
+                  "config": {
+                    "type": "object",
+                    "properties": {
+                      "types": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "multiple_choice",
+                            "true_false",
+                            "written",
+                            "flashcard"
+                          ]
+                        }
+                      },
+                      "answerSide": {
+                        "type": "string",
+                        "enum": [
+                          "front",
+                          "back"
+                        ]
+                      },
+                      "writtenGradeMode": {
+                        "type": "string",
+                        "enum": [
+                          "strict",
+                          "moderate",
+                          "loose"
+                        ]
+                      },
+                      "retypeWrongAnswers": {
+                        "type": "boolean",
+                        "default": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         },
         "responses": {
-          "201": {
-            "$ref": "#/components/responses/Created"
+          "200": {
+            "$ref": "#/components/responses/Success"
           }
         }
       }
@@ -880,6 +943,47 @@
         }
       }
     },
+    "/decks/{deckId}/learn/session/retype": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Learn"
+        ],
+        "summary": "Go lai dap an dung sau khi tra loi sai",
+        "operationId": "retypeLearnSessionAnswer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "flashcardId",
+                  "typedAnswer"
+                ],
+                "properties": {
+                  "flashcardId": {
+                    "type": "string"
+                  },
+                  "typedAnswer": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
     "/decks/{deckId}/learn/session/reset": {
       "parameters": [
         {
@@ -893,7 +997,35 @@
         "summary": "Dat lai phien hoc",
         "operationId": "resetLearnSession",
         "requestBody": {
-          "$ref": "#/components/requestBodies/JsonBody"
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "restart": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "resetProgress": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Xoa CardProgress cua user trong deck; du lieu nay dung chung voi Study va Quiz."
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "master",
+                      "cram"
+                    ]
+                  },
+                  "config": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
         },
         "responses": {
           "200": {

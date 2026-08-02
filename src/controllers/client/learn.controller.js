@@ -9,6 +9,7 @@ const round = catchAsync(async (req, res) => {
   const data = await learnService.buildRound(req.params.deckId, req.user._id, {
     limit: req.query.limit ? Number(req.query.limit) : undefined,
     onlyUnlearned: req.query.onlyUnlearned !== 'false',
+    includeFlashcard: req.query.includeFlashcard !== 'false',
     types
   })
 
