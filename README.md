@@ -72,14 +72,24 @@ REDIS_USERNAME=
 REDIS_PASSWORD=
 
 # Cloudinary
-CLOUD_NAME=
-API_KEY=
-API_SECRET=
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
 
 # Google OAuth
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_CALLBACK_URL=http://localhost:3000/api/v1/auth/google-callback
+```
+
+Lấy ba giá trị Cloudinary trong **Console > Settings > API Keys** rồi điền vào `.env`.
+Chỉ dùng `CLOUDINARY_API_SECRET` ở backend và không commit file `.env`. Các tên biến cũ
+`CLOUD_NAME`, `API_KEY`, `API_SECRET` vẫn được hỗ trợ để tương thích với cấu hình hiện tại.
+
+Cloudinary client có thể được dùng trong backend qua:
+
+```js
+import { cloudinary, isCloudinaryConfigured } from './configs/index.js'
 ```
 
 Google Cloud Console phải khai báo chính xác `GOOGLE_CALLBACK_URL` trong **Authorized redirect URIs**.
@@ -294,6 +304,8 @@ Luong dang ky hien tai dung OTP email:
 | --- | --- | --- | --- |
 | GET | `/users/me` | Bearer token | Lấy hồ sơ hiện tại |
 | PUT | `/users/me` | Bearer token | Cập nhật hồ sơ hiện tại |
+| POST | `/users/me/avatar` | Bearer token | Upload avatar lên Cloudinary (`multipart/form-data`, field `avatar`, tối đa 5 MB) |
+| DELETE | `/users/me/avatar` | Bearer token | Xóa avatar khỏi Cloudinary |
 
 ### Folders
 
@@ -311,6 +323,7 @@ Luong dang ky hien tai dung OTP email:
 | --- | --- | --- | --- |
 | GET | `/decks` | Bearer token | Deck của tôi (lọc theo `?folderId=`) |
 | GET | `/decks/public` | Bearer token | Deck công khai |
+| GET | `/decks/public/:id` | Bearer token | Chi tiết deck công khai kèm tác giả và danh sách thẻ |
 | POST | `/decks` | Bearer token | Tạo deck (có thể kèm `folderId`) |
 | GET | `/decks/:id` | Bearer token | Chi tiết deck |
 | PUT | `/decks/:id` | Bearer token | Cập nhật deck, xếp/chuyển/bỏ folder |
@@ -323,6 +336,8 @@ Luong dang ky hien tai dung OTP email:
 | --- | --- | --- | --- |
 | GET | `/decks/:deckId/cards` | Bearer token | Liệt kê thẻ trong deck |
 | POST | `/decks/:deckId/cards` | Bearer token | Thêm thẻ |
+| POST | `/decks/:deckId/cards/import/preview` | Bearer token | Xem trước dữ liệu CSV/TSV và xác định cột |
+| POST | `/decks/:deckId/cards/import` | Bearer token | Import nhiều thẻ từ CSV/TSV |
 | PUT | `/decks/:deckId/cards/reorder` | Bearer token | Sắp xếp lại thứ tự thẻ |
 | PUT | `/decks/:deckId/cards/:cardId` | Bearer token | Sửa thẻ |
 | DELETE | `/decks/:deckId/cards/:cardId` | Bearer token | Xóa thẻ |

@@ -16,6 +16,12 @@ const listPublic = async (req, res) => {
   res.status(StatusCodes.OK).json(result)
 }
 
+// [GET] /decks/public/:id
+const getPublicById = catchAsync(async (req, res) => {
+  const deck = await deckService.getPublicById(req.params.id)
+  res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Lấy bộ thẻ công khai thành công.', deck))
+})
+
 // [GET] /decks/:id
 const getById = catchAsync(async (req, res) => {
   const deck = await deckService.getById(req.params.id, req.user._id)
@@ -46,4 +52,4 @@ const copy = catchAsync(async (req, res) => {
   res.status(StatusCodes.CREATED).json(response(StatusCodes.CREATED, 'Sao chép bộ thẻ thành công.', deck))
 })
 
-export default { list, listPublic, getById, create, update, remove, copy }
+export default { list, listPublic, getPublicById, getById, create, update, remove, copy }
