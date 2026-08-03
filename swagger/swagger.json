@@ -346,6 +346,72 @@
         }
       }
     },
+    "/users/me/avatar": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Upload avatar len Cloudinary",
+        "description": "Chap nhan mot file JPEG, PNG, WebP hoac GIF toi da 5 MB. Upload lai se ghi de avatar cu cua user.",
+        "operationId": "uploadMyAvatar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "avatar"
+                ],
+                "properties": {
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "File JPEG, PNG, WebP hoac GIF; toi da 5 MB"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "413": {
+            "$ref": "#/components/responses/ContentTooLarge"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Xoa avatar khoi Cloudinary",
+        "description": "Xoa asset avatar cua user va dat avatarUrl ve null.",
+        "operationId": "deleteMyAvatar",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
     "/folders": {
       "get": {
         "tags": [
@@ -508,6 +574,28 @@
         "responses": {
           "200": {
             "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/public/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Lay chi tiet bo the cong khai kem tac gia va danh sach the",
+        "operationId": "getPublicDeckById",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
           }
         }
       }
@@ -1525,6 +1613,26 @@
       },
       "Unauthorized": {
         "description": "Chua xac thuc hoac token khong hop le",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ContentTooLarge": {
+        "description": "File vuot qua gioi han 5 MB",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "Cloudinary chua duoc cau hinh hoac tam thoi khong san sang",
         "content": {
           "application/json": {
             "schema": {

@@ -72,14 +72,24 @@ REDIS_USERNAME=
 REDIS_PASSWORD=
 
 # Cloudinary
-CLOUD_NAME=
-API_KEY=
-API_SECRET=
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
 
 # Google OAuth
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_CALLBACK_URL=http://localhost:3000/api/v1/auth/google-callback
+```
+
+Lấy ba giá trị Cloudinary trong **Console > Settings > API Keys** rồi điền vào `.env`.
+Chỉ dùng `CLOUDINARY_API_SECRET` ở backend và không commit file `.env`. Các tên biến cũ
+`CLOUD_NAME`, `API_KEY`, `API_SECRET` vẫn được hỗ trợ để tương thích với cấu hình hiện tại.
+
+Cloudinary client có thể được dùng trong backend qua:
+
+```js
+import { cloudinary, isCloudinaryConfigured } from './configs/index.js'
 ```
 
 Google Cloud Console phải khai báo chính xác `GOOGLE_CALLBACK_URL` trong **Authorized redirect URIs**.
@@ -103,12 +113,65 @@ Mặc định:
 - Server: `http://localhost:3000`
 - API base URL: `http://localhost:3000/api/v1`
 
+## Chạy bằng Docker
+
+Project có hai cấu hình:
+
+- `compose.yaml`: build source và chạy local.
+- `compose.prod.yaml`: pull image đã publish, không cần source code hoặc `npm install`.
+
+Chuẩn bị môi trường:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Nếu MongoDB chạy trên máy host, khi API chạy trong Docker hãy đặt:
+
+```env
+MONGO_URI=mongodb://host.docker.internal:27017/quiz-learning
+```
+
+Chạy toàn bộ API, worker và Redis local:
+
+```bash
+docker compose up -d --build
+docker compose ps
+docker compose logs -f api worker redis
+```
+
+Chỉ chạy Redis để API/worker tiếp tục chạy bằng npm hoặc PM2:
+
+```bash
+docker compose up -d redis
+```
+
+### Publish và chạy image production
+
+Build và push image lên Docker Hub:
+
+```bash
+docker login
+docker build -t vanphuoc0443/hitproduct-api:latest .
+docker push vanphuoc0443/hitproduct-api:latest
+```
+
+Máy nhận chỉ cần `compose.prod.yaml` và `.env`. Trong `.env`, đặt `HITPRODUCT_IMAGE`, `MONGO_URI`, `REDIS_PASSWORD` và các secret ứng dụng, sau đó chạy:
+
+```bash
+docker compose -f compose.prod.yaml pull
+docker compose -f compose.prod.yaml up -d
+docker compose -f compose.prod.yaml ps
+```
+
+Không commit hoặc chia sẻ file `.env` thật. Xem hướng dẫn chi tiết tại [docs/docker.md](./docs/docker.md).
+
 ## Chạy production bằng PM2
 
 Project có sẵn [ecosystem.config.cjs](./ecosystem.config.cjs) để quản lý hai tiến trình:
 
-- `api`: 2 instance chạy cluster
-- `worker`: 2 instance chạy fork để xử lý hàng đợi email
+- `api`: 1 instance cluster, tự restart khi vượt 300 MB
+- `worker`: 1 instance fork, tự restart khi vượt 150 MB
 
 Cài PM2 toàn cục:
 
@@ -241,6 +304,28 @@ Luong dang ky hien tai dung OTP email:
 | --- | --- | --- | --- |
 | GET | `/users/me` | Bearer token | Lấy hồ sơ hiện tại |
 | PUT | `/users/me` | Bearer token | Cập nhật hồ sơ hiện tại |
+| POST | `/users/me/avatar` | Bearer token | Upload avatar lên Cloudinary (`multipart/form-data`, field `avatar`, tối đa 5 MB) |
+| DELETE | `/users/me/avatar` | Bearer token | Xóa avatar khỏi Cloudinary |
+
+Upload avatar chấp nhận một file JPEG, PNG, WebP hoặc GIF. Backend giữ file trong memory,
+upload thẳng lên Cloudinary và cập nhật `avatarUrl` của user; không tạo file tạm trên server.
+Upload lại sẽ ghi đè avatar cũ của cùng user.
+
+```bash
+curl -X POST "http://localhost:3000/api/v1/users/me/avatar" \
+  -H "Authorization: Bearer <accessToken>" \
+  -F "avatar=@/path/to/avatar.png"
+```
+
+Xóa avatar:
+
+```bash
+curl -X DELETE "http://localhost:3000/api/v1/users/me/avatar" \
+  -H "Authorization: Bearer <accessToken>"
+```
+
+Các lỗi upload thường gặp: `400` khi thiếu/sai loại file, `401` khi token không hợp lệ,
+`413` khi file vượt 5 MB và `503` khi backend chưa được cấu hình Cloudinary.
 
 ### Folders
 
@@ -258,6 +343,7 @@ Luong dang ky hien tai dung OTP email:
 | --- | --- | --- | --- |
 | GET | `/decks` | Bearer token | Deck của tôi (lọc theo `?folderId=`) |
 | GET | `/decks/public` | Bearer token | Deck công khai |
+| GET | `/decks/public/:id` | Bearer token | Chi tiết deck công khai kèm tác giả và danh sách thẻ |
 | POST | `/decks` | Bearer token | Tạo deck (có thể kèm `folderId`) |
 | GET | `/decks/:id` | Bearer token | Chi tiết deck |
 | PUT | `/decks/:id` | Bearer token | Cập nhật deck, xếp/chuyển/bỏ folder |
@@ -270,6 +356,8 @@ Luong dang ky hien tai dung OTP email:
 | --- | --- | --- | --- |
 | GET | `/decks/:deckId/cards` | Bearer token | Liệt kê thẻ trong deck |
 | POST | `/decks/:deckId/cards` | Bearer token | Thêm thẻ |
+| POST | `/decks/:deckId/cards/import/preview` | Bearer token | Xem trước dữ liệu CSV/TSV và xác định cột |
+| POST | `/decks/:deckId/cards/import` | Bearer token | Import nhiều thẻ từ CSV/TSV |
 | PUT | `/decks/:deckId/cards/reorder` | Bearer token | Sắp xếp lại thứ tự thẻ |
 | PUT | `/decks/:deckId/cards/:cardId` | Bearer token | Sửa thẻ |
 | DELETE | `/decks/:deckId/cards/:cardId` | Bearer token | Xóa thẻ |

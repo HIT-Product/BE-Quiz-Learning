@@ -22,7 +22,10 @@ const LADDER = [QUESTION_TYPE.MULTIPLE_CHOICE, QUESTION_TYPE.TRUE_FALSE, QUESTIO
 
 const hasMultipleChoiceDistractor = (card, allCards) => {
   const correct = normalize(card.back)
-  return [...(card.distractors || []), ...allCards.filter((other) => !other._id.equals(card._id)).map((other) => other.back)]
+  return [
+    ...(card.distractors || []),
+    ...allCards.filter((other) => !other._id.equals(card._id)).map((other) => other.back)
+  ]
     .map(normalize)
     .some((answer) => answer && answer !== correct)
 }

@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { DECK_VISIBILITY, FLASHCARD_SOURCE } from '../../constants/index.js'
-import { deckModel, flashcardModel, folderModel, deckCopyLogModel } from '../../models/index.js'
+import { deckModel, flashcardModel, folderModel, deckCopyLogModel, userModel } from '../../models/index.js'
 import { ApiError } from '../../utils/index.js'
 
 // Tìm deck sở hữu
@@ -141,4 +141,23 @@ const listPublic = async ({ q, sort, page, limit } = {}) => {
   return { data, total, page: pageNum, limit: limitNum }
 }
 
-export default { list, listPublic, getById, create, update, remove, copy }
+// Lấy đầy đủ dữ liệu cho màn chi tiết deck công khai
+const getPublicById = async (deckId) => {
+  const deck = await deckModel.findOne({ _id: deckId, visibility: DECK_VISIBILITY.PUBLIC }).lean()
+  if (!deck) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy bộ thẻ công khai.')
+  }
+
+  const [owner, cards] = await Promise.all([
+    userModel.findById(deck.ownerId).select('displayName avatarUrl').lean(),
+    flashcardModel
+      .find({ deckId: deck._id })
+      .sort({ sortOrder: 1, createdAt: 1 })
+      .select('front back stem cardType distractors sortOrder')
+      .lean()
+  ])
+
+  return { ...deck, owner, cards, cardCount: cards.length }
+}
+
+export default { list, listPublic, getPublicById, getById, create, update, remove, copy }
