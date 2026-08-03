@@ -41,4 +41,10 @@ const listPublic = {
   })
 }
 
-export default { create, update, list, listPublic }
+const getPublicById = {
+  params: Joi.object({
+    id: objectId.required()
+  })
+}
+
+export default { create, update, list, listPublic, getPublicById }

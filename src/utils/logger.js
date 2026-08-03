@@ -15,6 +15,7 @@ if (!fs.existsSync(logDir)) {
 }
 
 const isDev = envConfig.server.nodeEnv !== 'production'
+const fileLoggingEnabled = process.env.LOG_TO_FILE !== 'false'
 
 const formats = [
   winston.format.colorize({ all: true }),
@@ -27,18 +28,22 @@ const logger = winston.createLogger({
   level: isDev ? 'debug' : 'info',
   format: winston.format.combine(...formats),
   transports: [
-    ...(isDev ? [new winston.transports.Console()] : []),
-    new winston.transports.File({
-      filename: path.join(logDir, 'error.log'),
-      level: 'error'
-    }),
-    new winston.transports.File({
-      filename: path.join(logDir, 'info.log'),
-      level: 'info'
-    }),
-    new winston.transports.File({
-      filename: path.join(logDir, 'combined.log')
-    })
+    ...(isDev || !fileLoggingEnabled ? [new winston.transports.Console()] : []),
+    ...(fileLoggingEnabled
+      ? [
+          new winston.transports.File({
+            filename: path.join(logDir, 'error.log'),
+            level: 'error'
+          }),
+          new winston.transports.File({
+            filename: path.join(logDir, 'info.log'),
+            level: 'info'
+          }),
+          new winston.transports.File({
+            filename: path.join(logDir, 'combined.log')
+          })
+        ]
+      : [])
   ],
   exitOnError: false
 })
