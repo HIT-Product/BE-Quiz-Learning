@@ -307,6 +307,26 @@ Luong dang ky hien tai dung OTP email:
 | POST | `/users/me/avatar` | Bearer token | Upload avatar lên Cloudinary (`multipart/form-data`, field `avatar`, tối đa 5 MB) |
 | DELETE | `/users/me/avatar` | Bearer token | Xóa avatar khỏi Cloudinary |
 
+Upload avatar chấp nhận một file JPEG, PNG, WebP hoặc GIF. Backend giữ file trong memory,
+upload thẳng lên Cloudinary và cập nhật `avatarUrl` của user; không tạo file tạm trên server.
+Upload lại sẽ ghi đè avatar cũ của cùng user.
+
+```bash
+curl -X POST "http://localhost:3000/api/v1/users/me/avatar" \
+  -H "Authorization: Bearer <accessToken>" \
+  -F "avatar=@/path/to/avatar.png"
+```
+
+Xóa avatar:
+
+```bash
+curl -X DELETE "http://localhost:3000/api/v1/users/me/avatar" \
+  -H "Authorization: Bearer <accessToken>"
+```
+
+Các lỗi upload thường gặp: `400` khi thiếu/sai loại file, `401` khi token không hợp lệ,
+`413` khi file vượt 5 MB và `503` khi backend chưa được cấu hình Cloudinary.
+
 ### Folders
 
 | Method | Endpoint | Xác thực | Chức năng |
