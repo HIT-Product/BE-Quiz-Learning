@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import { userModel } from '../../models/index.js'
 import { ApiError } from '../../utils/index.js'
+import cloudinaryService from '../cloudinary.service.js'
 
 // Lấy hồ sơ cá nhân
 const getProfile = async (userId) => {
@@ -30,7 +31,19 @@ const updateProfile = async (userId, updateData) => {
   return user
 }
 
+const updateAvatar = async (userId, buffer) => {
+  const uploadResult = await cloudinaryService.uploadAvatar(buffer, userId)
+  return updateProfile(userId, { avatarUrl: uploadResult.secure_url })
+}
+
+const removeAvatar = async (userId) => {
+  await cloudinaryService.deleteAvatar(userId)
+  return updateProfile(userId, { avatarUrl: null })
+}
+
 export default {
   getProfile,
-  updateProfile
+  updateProfile,
+  updateAvatar,
+  removeAvatar
 }

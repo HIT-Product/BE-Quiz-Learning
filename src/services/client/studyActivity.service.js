@@ -92,14 +92,7 @@ const recordStudyActivity = async (userId, source, occurredAt = new Date()) => {
   }
 }
 
-export {
-  STUDY_TIMEZONE,
-  STUDY_ACTIVITY_SOURCE,
-  toDateKey,
-  shiftDateKey,
-  calculateStudyStreak,
-  recordStudyActivity
-}
+export { STUDY_TIMEZONE, STUDY_ACTIVITY_SOURCE, toDateKey, shiftDateKey, calculateStudyStreak, recordStudyActivity }
 
 export default {
   toDateKey,

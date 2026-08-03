@@ -8,7 +8,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:3000/api/v1",
+      "value": "http://127.0.0.1:3000/api/v1",
       "type": "string"
     },
     {
@@ -28,6 +28,11 @@
     },
     {
       "key": "deckId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "publicDeckId",
       "value": "",
       "type": "string"
     },
@@ -736,6 +741,81 @@
               }
             }
           ]
+        },
+        {
+          "name": "Upload My Avatar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/users/me/avatar",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "avatar",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "description": "Chon file JPEG, PNG, WebP hoac GIF toi da 5 MB. Can cau hinh Cloudinary trong backend."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Avatar duoc luu tren Cloudinary\", () => {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.expect(data.avatarUrl).to.be.a(\"string\");",
+                  "  pm.expect(data.avatarUrl).to.match(/^https:\\/\\/res\\.cloudinary\\.com\\//);",
+                  "  pm.environment.set(\"avatarUrl\", data.avatarUrl);",
+                  "});",
+                  "pm.test(\"Khong lo passwordHash\", () => {",
+                  "  pm.expect(pm.response.json().data).to.not.have.property(\"passwordHash\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete My Avatar",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/users/me/avatar",
+            "description": "Xoa asset avatar cua user tren Cloudinary va dat avatarUrl ve null."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Avatar da duoc xoa\", () => {",
+                  "  pm.expect(pm.response.json().data.avatarUrl).to.eql(null);",
+                  "  pm.environment.unset(\"avatarUrl\");",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -1059,7 +1139,59 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.length > 0 && json.data[0]._id) {",
+                  "  pm.collectionVariables.set(\"publicDeckId\", json.data[0]._id);",
+                  "  console.log(\"publicDeckId dau tien da duoc luu.\");",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Public Deck Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/public/{{publicDeckId}}",
+            "description": "Lay chi tiet deck public kem thong tin owner va danh sach cards. Hay chay List Public Decks hoac Search Public Decks truoc de luu {{publicDeckId}}."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const publicDeckId = pm.collectionVariables.get('publicDeckId');",
+                  "if (!publicDeckId) { throw new Error('Thieu publicDeckId. Hay chay List Public Decks hoac Search Public Decks truoc.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Tra ve chi tiet deck public day du\", () => {",
+                  "  pm.expect(json.statusCode).to.eql(200);",
+                  "  pm.expect(json.data).to.be.an(\"object\");",
+                  "  pm.expect(json.data.visibility).to.eql(\"public\");",
+                  "  pm.expect(json.data).to.have.property(\"owner\");",
+                  "  pm.expect(json.data.cards).to.be.an(\"array\");",
+                  "  pm.expect(json.data.cardCount).to.eql(json.data.cards.length);",
+                  "});"
                 ]
               }
             }
@@ -1098,6 +1230,7 @@
                   "",
                   "if (json.data && json.data.length > 0 && json.data[0]._id) {",
                   "  pm.collectionVariables.set(\"deckId\", json.data[0]._id);",
+                  "  pm.collectionVariables.set(\"publicDeckId\", json.data[0]._id);",
                   "  console.log(\"deckId search dau tien da duoc luu.\");",
                   "}"
                 ]
@@ -1538,7 +1671,7 @@
     },
     {
       "name": "Flashcards",
-      "description": "API the hoc (flashcard), long trong deck: /decks/{{deckId}}/cards. Create Card luu {{cardId}}.",
+      "description": "API the hoc (flashcard), long trong deck: /decks/{{deckId}}/cards. Ho tro tao tung the hoac import nhieu the tu CSV/TSV. Create Card luu {{cardId}}.",
       "item": [
         {
           "name": "List Cards",
@@ -1605,6 +1738,95 @@
                   "  pm.collectionVariables.set('cardId', json.data._id);",
                   "  console.log('cardId da duoc luu.');",
                   "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Preview Card Import",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/cards/import/preview",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rawText\": \"front,back,distractor_1,distractor_2\\nhello,xin chao,tam biet,cam on\\ngoodbye,tam biet,xin chao,cam on\",\n  \"options\": {\n    \"delimiter\": \"auto\",\n    \"hasHeader\": true\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Phan tich CSV/TSV truoc khi import. Ket qua tra ve headers, previewRows, delimiter va totalRows de chon columnMapping cho request Import Cards."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Co thong tin preview\", () => {",
+                  "  pm.expect(json.data.headers).to.be.an('array').that.is.not.empty;",
+                  "  pm.expect(json.data.previewRows).to.be.an('array');",
+                  "  pm.expect(json.data.totalRows).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Import Cards from CSV",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/decks/{{deckId}}/cards/import",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rawText\": \"front,back,distractor_1,distractor_2\\nhello,xin chao,tam biet,cam on\\ngoodbye,tam biet,xin chao,cam on\",\n  \"columnMapping\": {\n    \"front\": 0,\n    \"back\": 1,\n    \"distractors\": [2, 3]\n  },\n  \"options\": {\n    \"delimiter\": \"auto\",\n    \"hasHeader\": true\n  },\n  \"dryRun\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Import nhieu the tu CSV/TSV vao deck. Chi so columnMapping bat dau tu 0. Dat dryRun=true de kiem tra mapping ma khong ghi du lieu; dryRun=false se import that."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Co ket qua import\", () => {",
+                  "  pm.expect(json.data.imported).to.be.a('number');",
+                  "  pm.expect(json.data.skipped).to.be.an('array');",
+                  "});"
                 ]
               }
             }

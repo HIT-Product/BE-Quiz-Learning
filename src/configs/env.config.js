@@ -40,9 +40,9 @@ const env = {
     callbackUrl: process.env.GOOGLE_CALLBACK_URL
   },
   cloudinary: {
-    cloudName: process.env.CLOUD_NAME,
-    apiKey: process.env.API_KEY,
-    apiSecret: process.env.API_SECRET
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || process.env.CLOUD_NAME,
+    apiKey: process.env.CLOUDINARY_API_KEY || process.env.API_KEY,
+    apiSecret: process.env.CLOUDINARY_API_SECRET || process.env.API_SECRET
   },
   livekit: {
     url: process.env.LIVEKIT_URL,

@@ -512,6 +512,28 @@
         }
       }
     },
+    "/decks/public/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Lay chi tiet bo the cong khai kem tac gia va danh sach the",
+        "operationId": "getPublicDeckById",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
     "/decks/{id}": {
       "parameters": [
         {
