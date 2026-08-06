@@ -1,6 +1,7 @@
 const APP_PATH = {
   PUBLIC_DIR: 'public',
   API_V1: '/api/v1',
+  API_DOCS: '/api-docs',
   ROOT: '/',
   VIEWS_DIR: 'views'
 }

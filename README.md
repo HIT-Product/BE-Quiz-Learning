@@ -112,6 +112,7 @@ Mặc định:
 
 - Server: `http://localhost:3000`
 - API base URL: `http://localhost:3000/api/v1`
+- Swagger UI: `http://localhost:3000/api-docs`
 
 ## Chạy bằng Docker
 
@@ -452,7 +453,49 @@ Một ngày học được ghi nhận sau khi review thẻ, trả lời trong le
 
 Thiết kế và contract đầy đủ xem tại [`docs/dashboard.md`](docs/dashboard.md). OpenAPI nằm trong [`swagger/swagger.json`](swagger/swagger.json).
 
-## Ví dụ gọi API
+### Friends
+
+| Method | Endpoint | Xac thuc | Chuc nang |
+| --- | --- | --- | --- |
+| GET | `/friends` | Bearer token | Danh sach ban be (phan trang) |
+| GET | `/friends/requests` | Bearer token | Danh sach loi moi cho xu ly (phan trang) |
+| GET | `/friends/presence` | Bearer token | Trang thai truc tuyen cua ban be |
+| POST | `/friends/requests` | Bearer token | Gui loi moi ket ban |
+| POST | `/friends/requests/:id/accept` | Bearer token | Chap nhan loi moi |
+| POST | `/friends/requests/:id/decline` | Bearer token | Tu choi loi moi |
+| DELETE | `/friends/requests/:id` | Bearer token | Huy loi moi da gui |
+| DELETE | `/friends/:id` | Bearer token | Huy ket ban |
+
+Moi nguoi dung toi da 500 ban be va 100 loi moi dang cho. Khi ca hai deu gui loi moi cho nhau, he thong tu dong chap nhan.
+
+### Blocks
+
+| Method | Endpoint | Xac thuc | Chuc nang |
+| --- | --- | --- | --- |
+| GET | `/blocks` | Bearer token | Danh sach tai khoan da chan (phan trang) |
+| POST | `/blocks` | Bearer token | Chan mot nguoi dung (tu dong xoa ket ban/loi moi neu co) |
+| DELETE | `/blocks/:id` | Bearer token | Bo chan |
+
+Moi nguoi dung toi da 500 tai khoan bi chan.
+
+### Conversations (DM)
+
+| Method | Endpoint | Xac thuc | Chuc nang |
+| --- | --- | --- | --- |
+| GET | `/conversations` | Bearer token | Danh sach cuoc tro chuyen voi unread count |
+| POST | `/conversations/messages` | Bearer token | Gui tin nhan truc tiep |
+| GET | `/conversations/:id/messages` | Bearer token | Lich su tin nhan (cursor pagination bang `?before=<messageId>`) |
+| POST | `/conversations/:id/read` | Bearer token | Danh dau da doc |
+
+Chi co the nhan tin khi hai ben la ban be va chua chan nhau. `clientMessageId` trong body `sendMessage` dung de dedup phia client.
+
+### Feed
+
+| Method | Endpoint | Xac thuc | Chuc nang |
+| --- | --- | --- | --- |
+| GET | `/feed` | Bearer token | Hoat dong gan day cua ban be (phan trang, loai tru nguoi bi chan) |
+
+## Vi du goi API
 
 ```js
 const apiUrl = 'http://localhost:3000/api/v1'

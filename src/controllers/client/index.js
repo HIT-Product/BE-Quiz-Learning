@@ -9,6 +9,10 @@ import studyController from './study.controller.js'
 import learnSessionController from './learnSession.controller.js'
 import studyRoomController from './studyRoom.controller.js'
 import dashboardController from './dashboard.controller.js'
+import friendController from './friend.controller.js'
+import blockController from './block.controller.js'
+import dmController from './dm.controller.js'
+import feedController from './feed.controller.js'
 
 export {
   userController,
@@ -21,5 +25,9 @@ export {
   studyController,
   learnSessionController,
   studyRoomController,
-  dashboardController
+  dashboardController,
+  friendController,
+  blockController,
+  dmController,
+  feedController
 }

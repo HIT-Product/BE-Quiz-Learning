@@ -230,6 +230,21 @@
       "key": "searchLimit",
       "value": "10",
       "type": "string"
+    },
+    {
+      "key": "candidateUsername",
+      "value": "postmanuser01",
+      "type": "string"
+    },
+    {
+      "key": "friendUserId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "friendRequestId",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -716,14 +731,14 @@
             "url": "{{baseUrl}}/users/me",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"displayName\": \"Updated User\",\n  \"avatarUrl\": \"https://example.com/avatar.png\",\n  \"defaultQuizSize\": 20\n}",
+              "raw": "{\n  \"displayName\": \"Updated User\",\n  \"defaultQuizSize\": 20\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "Cap nhat displayName, avatarUrl va defaultQuizSize."
+            "description": "Cap nhat displayName va defaultQuizSize. avatarUrl chi doi qua POST/DELETE /users/me/avatar; username doi qua PUT /users/me/username."
           },
           "event": [
             {
@@ -811,6 +826,146 @@
                   "pm.test(\"Avatar da duoc xoa\", () => {",
                   "  pm.expect(pm.response.json().data.avatarUrl).to.eql(null);",
                   "  pm.environment.unset(\"avatarUrl\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check Username Available",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/username-available?username={{candidateUsername}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "username-available"
+              ],
+              "query": [
+                {
+                  "key": "username",
+                  "value": "{{candidateUsername}}"
+                }
+              ]
+            },
+            "description": "Kiem tra username con trong. Tra ve username da normalize va co dung duoc hay khong. Username cua chinh minh duoc coi la con trong."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Tra ve ket qua kiem tra\", () => {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.expect(data).to.have.property(\"available\");",
+                  "  pm.expect(data.username).to.eql(pm.collectionVariables.get(\"candidateUsername\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update My Username",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/users/me/username",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{candidateUsername}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Dat hoac doi username. Chi doi duoc mot lan moi 30 ngay. Tra 409 khi username da co nguoi dung hoac chua het cooldown; gui lai dung username hien tai khong tinh la doi."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 hoac 409\", () => pm.expect(pm.response.code).to.be.oneOf([200, 409]));",
+                  "if (pm.response.code === 200) {",
+                  "  pm.test(\"Username duoc luu\", () => {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.expect(data.username).to.eql(pm.collectionVariables.get(\"candidateUsername\"));",
+                  "    pm.expect(data).to.not.have.property(\"passwordHash\");",
+                  "  });",
+                  "} else {",
+                  "  pm.test(\"409 giai thich ly do\", () => {",
+                  "    pm.expect(pm.response.json().message).to.be.a(\"string\");",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update My Privacy",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/users/me/privacy",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activityVisibility\": \"friends\",\n  \"friendRequestPolicy\": \"everyone\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Cap nhat quyen rieng tu; gui it nhat mot truong. activityVisibility nhan friends hoac private; friendRequestPolicy nhan everyone hoac nobody."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Privacy duoc cap nhat\", () => {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.expect(data.activityVisibility).to.eql(\"friends\");",
+                  "  pm.expect(data.friendRequestPolicy).to.eql(\"everyone\");",
                   "});"
                 ]
               }
@@ -3099,6 +3254,240 @@
       ]
     },
     {
+      "name": "Friends",
+      "description": "API ket ban; can Bearer {{accessToken}}. Dat {{friendUserId}} truoc khi chay.",
+      "item": [
+        {
+          "name": "Send Friend Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/friends/requests",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{friendUserId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Gui loi moi ket ban. Neu doi phuong da gui loi moi truoc do thi hai ben tu dong thanh ban va autoAccepted = true. Loi moi bi tu choi chi gui lai duoc sau 24 gio."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Tra ve friendship\", () => {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.expect(data).to.have.property(\"autoAccepted\");",
+                  "  pm.expect(data.friendship.status).to.be.oneOf([\"pending\", \"accepted\"]);",
+                  "  pm.collectionVariables.set(\"friendRequestId\", data.friendship._id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Accept Friend Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/friends/requests/{{friendRequestId}}/accept",
+            "description": "Chap nhan loi moi. Chi nguoi nhan loi moi goi duoc; chay request nay bang accessToken cua nguoi nhan. Tra 409 neu loi moi khong con pending."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Friendship da accepted\", () => {",
+                  "  pm.expect(pm.response.json().data.status).to.eql(\"accepted\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Friends",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/friends?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "friends"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Pending Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/friends/requests?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "friends",
+                "requests"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Decline Friend Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/friends/requests/{{friendshipId}}/decline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "friends",
+                "requests",
+                "{{friendshipId}}",
+                "decline"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancel Friend Request",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/friends/requests/{{friendshipId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "friends",
+                "requests",
+                "{{friendshipId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unfriend",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/friends/{{friendshipId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "friends",
+                "{{friendshipId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Friends Presence",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/friends/presence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "friends",
+                "presence"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "_Health Check",
       "description": "Kiem tra server dang chay.",
       "item": [
@@ -3121,6 +3510,237 @@
               }
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "Blocks",
+      "item": [
+        {
+          "name": "List Blocked",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/blocks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blocks"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Block User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/blocks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blocks"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unblock User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/blocks/{{blockId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blocks",
+                "{{blockId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Conversations",
+      "item": [
+        {
+          "name": "List Conversations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversations?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "conversations"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipientId\": \"{{userId}}\",\n  \"clientMessageId\": \"msg-001\",\n  \"body\": \"Xin chao!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/conversations/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "conversations",
+                "messages"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Messages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversations/{{conversationId}}/messages?limit=30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "conversations",
+                "{{conversationId}}",
+                "messages"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "30"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark Read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversations/{{conversationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "conversations",
+                "{{conversationId}}",
+                "read"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Feed",
+      "item": [
+        {
+          "name": "Get Activity Feed",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/feed?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "feed"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
         }
       ]
     }
