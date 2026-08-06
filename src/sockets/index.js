@@ -8,6 +8,7 @@ import socketAuthMiddleware from './middlewares/socketAuth.middleware.js'
 import registerRoomHandlers from './handlers/room.handler.js'
 import registerChatHandlers from './handlers/chat.handler.js'
 import registerPomodoroHandlers from './handlers/pomodoro.handler.js'
+import registerSocialHandlers from './handlers/social.handler.js'
 
 let io = null
 
@@ -36,6 +37,7 @@ const initSocket = (httpServer) => {
     registerRoomHandlers(nsp, socket)
     registerChatHandlers(nsp, socket)
     registerPomodoroHandlers(nsp, socket)
+    registerSocialHandlers(nsp, socket)
 
     socket.on('error', (err) => logger.error(`Socket error: ${err.message}`))
   })

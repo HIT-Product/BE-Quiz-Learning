@@ -1,10 +1,12 @@
 import path from 'path'
+import { readFileSync } from 'node:fs'
 import cors from 'cors'
 import http from 'http'
 import express from 'express'
 import mongoose from 'mongoose'
 import { fileURLToPath } from 'url'
 import cookieParser from 'cookie-parser'
+import swaggerUi from 'swagger-ui-express'
 import { StatusCodes } from 'http-status-codes'
 
 import './configs/google.config.js'
@@ -22,11 +24,19 @@ const httpServer = http.createServer(app)
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+const swaggerDocument = JSON.parse(readFileSync(path.join(__dirname, '..', 'swagger', 'swagger.json'), 'utf8'))
 
 app.set('views', `${__dirname}/views`)
 app.set(APP_VIEW.ENGINE_KEY, APP_VIEW.ENGINE)
 
 app.use(express.static(path.join(__dirname, '..', APP_PATH.PUBLIC_DIR)))
+app.use(
+  APP_PATH.API_DOCS,
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerDocument, {
+    customSiteTitle: 'HITProduct API Docs'
+  })
+)
 
 app.use(
   cors({
