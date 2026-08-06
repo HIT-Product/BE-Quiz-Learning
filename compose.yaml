@@ -11,6 +11,8 @@ x-app: &app
   depends_on:
     redis:
       condition: service_healthy
+    mongo:
+      condition: service_healthy
   extra_hosts:
     - 'host.docker.internal:host-gateway'
   logging:
@@ -27,6 +29,7 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: 3000
+      MONGO_URI: mongodb://mongo:27017/hitproduct
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_USERNAME: ''
@@ -66,6 +69,27 @@ services:
     cpus: 0.35
     stop_grace_period: 15s
 
+  mongo:
+    image: mongo:7
+    ports:
+      - '127.0.0.1:27017:27017'
+    volumes:
+      - mongo_data:/data/db
+    mem_limit: 512m
+    cpus: 0.5
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', 'db.runCommand({ping:1})']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+
   redis:
     image: redis:7.4-alpine
     command:
@@ -103,3 +127,4 @@ services:
 
 volumes:
   redis_data:
+  mongo_data:

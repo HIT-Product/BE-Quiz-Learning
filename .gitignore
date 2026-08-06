@@ -25,6 +25,11 @@ dist
 # Log
 logs
 .tmp-*.log
+cloudflare-fe.*.log
+
+# Temp / scratch
+.tmp-*.mjs
+docs/~$*
 
 # Static
 uploads/*

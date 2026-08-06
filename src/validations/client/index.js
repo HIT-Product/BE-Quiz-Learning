@@ -8,6 +8,10 @@ import learnValidation from './learn.validation.js'
 import studyValidation from './study.validation.js'
 import learnSessionValidation from './learnSession.validation.js'
 import studyRoomValidation from './studyRoom.validation.js'
+import friendValidation from './friend.validation.js'
+import blockValidation from './block.validation.js'
+import dmValidation from './dm.validation.js'
+import feedValidation from './feed.validation.js'
 
 export {
   authValidation,
@@ -19,5 +23,9 @@ export {
   learnValidation,
   studyValidation,
   learnSessionValidation,
-  studyRoomValidation
+  studyRoomValidation,
+  friendValidation,
+  blockValidation,
+  dmValidation,
+  feedValidation
 }

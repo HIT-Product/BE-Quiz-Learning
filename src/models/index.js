@@ -14,6 +14,13 @@ import roomMessageModel from './roomMessage.model.js'
 import roomParticipantModel from './roomParticipant.model.js'
 import pomodoroSessionModel from './pomodoroSession.model.js'
 import studyActivityModel from './studyActivity.model.js'
+import friendshipModel from './friendship.model.js'
+import userBlockModel from './userBlock.model.js'
+import notificationModel from './notification.model.js'
+import conversationModel from './conversation.model.js'
+import conversationMemberModel from './conversationMember.model.js'
+import directMessageModel from './directMessage.model.js'
+import activityEventModel from './activityEvent.model.js'
 
 export {
   userModel,
@@ -31,5 +38,12 @@ export {
   roomMessageModel,
   roomParticipantModel,
   pomodoroSessionModel,
-  studyActivityModel
+  studyActivityModel,
+  friendshipModel,
+  userBlockModel,
+  notificationModel,
+  conversationModel,
+  conversationMemberModel,
+  directMessageModel,
+  activityEventModel
 }
