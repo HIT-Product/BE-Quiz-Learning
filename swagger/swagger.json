@@ -51,6 +51,22 @@
     {
       "name": "Dashboard",
       "description": "Tong quan hoc tap ca nhan va study streak"
+    },
+    {
+      "name": "Friends",
+      "description": "Ket ban va loi moi ket ban"
+    },
+    {
+      "name": "Blocks",
+      "description": "Block va unblock nguoi dung"
+    },
+    {
+      "name": "Conversations",
+      "description": "Tin nhan truc tiep giua ban be"
+    },
+    {
+      "name": "Feed",
+      "description": "Feed hoat dong cua ban be"
     }
   ],
   "security": [
@@ -334,7 +350,30 @@
         "summary": "Cap nhat ho so hien tai",
         "operationId": "updateMe",
         "requestBody": {
-          "$ref": "#/components/requestBodies/JsonBody"
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "minProperties": 1,
+                "properties": {
+                  "displayName": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "defaultQuizSize": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  }
+                }
+              },
+              "example": {
+                "displayName": "Updated User",
+                "defaultQuizSize": 20
+              }
+            }
+          }
         },
         "responses": {
           "200": {
@@ -343,7 +382,8 @@
           "400": {
             "$ref": "#/components/responses/BadRequest"
           }
-        }
+        },
+        "description": "Chi cap nhat displayName va defaultQuizSize. avatarUrl chi doi qua POST/DELETE /users/me/avatar; username doi qua PUT /users/me/username."
       }
     },
     "/users/me/avatar": {
@@ -408,6 +448,150 @@
           },
           "503": {
             "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/users/username-available": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Kiem tra username con trong",
+        "description": "Tra ve username da normalize va co dung duoc hay khong. Username cua chinh minh duoc coi la con trong.",
+        "operationId": "checkUsernameAvailable",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 30,
+              "pattern": "^[a-z0-9](?:[a-z0-9._]{1,28})[a-z0-9]$",
+              "description": "Chu thuong, so, dau . va _; bat dau va ket thuc bang chu hoac so. Khong chua .. hoac __ va khong thuoc danh sach reserved."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/users/me/username": {
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Dat hoac doi username",
+        "description": "Chi doi duoc mot lan moi 30 ngay. Gui lai dung username hien tai khong tinh la doi. Tra 409 khi username da co nguoi dung hoac chua het cooldown.",
+        "operationId": "updateMyUsername",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "username"
+                ],
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 30,
+                    "pattern": "^[a-z0-9](?:[a-z0-9._]{1,28})[a-z0-9]$",
+                    "description": "Chu thuong, so, dau . va _; bat dau va ket thuc bang chu hoac so. Khong chua .. hoac __ va khong thuoc danh sach reserved."
+                  }
+                }
+              },
+              "example": {
+                "username": "nguyenvanphuoc"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/users/me/privacy": {
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Cap nhat quyen rieng tu",
+        "description": "Gui it nhat mot truong. activityVisibility dieu khien ai thay activity feed; friendRequestPolicy dieu khien ai gui duoc loi moi ket ban.",
+        "operationId": "updateMyPrivacy",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "minProperties": 1,
+                "properties": {
+                  "activityVisibility": {
+                    "type": "string",
+                    "enum": [
+                      "friends",
+                      "private"
+                    ],
+                    "default": "friends"
+                  },
+                  "friendRequestPolicy": {
+                    "type": "string",
+                    "enum": [
+                      "everyone",
+                      "nobody"
+                    ],
+                    "default": "everyone"
+                  }
+                }
+              },
+              "example": {
+                "activityVisibility": "friends",
+                "friendRequestPolicy": "everyone"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
           }
         }
       }
@@ -1378,6 +1562,724 @@
           }
         }
       }
+    },
+    "/friends/requests": {
+      "get": {
+        "tags": [
+          "Friends"
+        ],
+        "summary": "Lay danh sach loi moi ket ban da nhan",
+        "description": "Tra ve danh sach loi moi PENDING ma nguoi dung la addressee, phan trang theo requestedAt giam dan.",
+        "operationId": "listPendingRequests",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Friends"
+        ],
+        "summary": "Gui loi moi ket ban",
+        "description": "Neu doi phuong da gui loi moi cho minh truoc do thi hai ben tu dong thanh ban va autoAccepted = true. Loi moi bi tu choi truoc do chi gui lai duoc sau 24 gio.",
+        "operationId": "sendFriendRequest",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{24}$",
+                    "description": "ObjectId cua nguoi nhan loi moi"
+                  }
+                }
+              },
+              "example": {
+                "userId": "64b000000000000000000001"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Da gui loi moi, hoac hai ben tu dong thanh ban",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "friendship": {
+                              "$ref": "#/components/schemas/Friendship"
+                            },
+                            "autoAccepted": {
+                              "type": "boolean",
+                              "description": "true khi loi moi cheo lam hai ben thanh ban ngay"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/friends": {
+      "get": {
+        "tags": [
+          "Friends"
+        ],
+        "summary": "Lay danh sach ban be",
+        "description": "Tra ve danh sach ban be da ket ban, phan trang theo respondedAt giam dan.",
+        "operationId": "listFriends",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/friends/presence": {
+      "get": {
+        "tags": [
+          "Friends"
+        ],
+        "summary": "Lay trang thai hien dien cua ban be",
+        "description": "Tra ve map { userId: status } cho tat ca ban be hien tai. Status la online | idle | offline.",
+        "operationId": "getFriendsPresence",
+        "responses": {
+          "200": {
+            "description": "Presence map",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string",
+                            "enum": [
+                              "online",
+                              "idle",
+                              "offline"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/friends/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "description": "Id cua friendship (ACCEPTED)"
+        }
+      ],
+      "delete": {
+        "tags": [
+          "Friends"
+        ],
+        "summary": "Huy ket ban",
+        "description": "Xoa quan he ban be. Nguoi dung phai la mot trong hai ben cua friendship.",
+        "operationId": "unfriend",
+        "responses": {
+          "204": {
+            "description": "Da huy ket ban"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/friends/requests/{id}/accept": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "description": "Id cua friendship dang o trang thai pending"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Friends"
+        ],
+        "summary": "Chap nhan loi moi ket ban",
+        "description": "Chi nguoi nhan loi moi moi accept duoc. Tra 404 khi loi moi khong ton tai hoac nguoi goi khong phai nguoi nhan; tra 409 khi loi moi khong con o trang thai pending.",
+        "operationId": "acceptFriendRequest",
+        "responses": {
+          "200": {
+            "description": "Da chap nhan loi moi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Friendship"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/friends/requests/{id}/decline": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "description": "Id cua friendship dang o trang thai pending"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Friends"
+        ],
+        "summary": "Tu choi loi moi ket ban",
+        "description": "Chi nguoi nhan loi moi moi tu choi duoc. Sau khi tu choi, nguoi gui phai cho 24 gio truoc khi gui lai.",
+        "operationId": "declineFriendRequest",
+        "responses": {
+          "200": {
+            "description": "Da tu choi loi moi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Friendship"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/friends/requests/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "description": "Id cua friendship dang o trang thai pending"
+        }
+      ],
+      "delete": {
+        "tags": [
+          "Friends"
+        ],
+        "summary": "Huy loi moi ket ban da gui",
+        "description": "Chi nguoi gui loi moi moi huy duoc. Xoa ban ghi friendship khoi DB.",
+        "operationId": "cancelFriendRequest",
+        "responses": {
+          "204": {
+            "description": "Da huy loi moi"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/blocks": {
+      "get": {
+        "tags": [
+          "Blocks"
+        ],
+        "summary": "Lay danh sach nguoi da block",
+        "operationId": "listBlocked",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Blocks"
+        ],
+        "summary": "Block nguoi dung",
+        "operationId": "blockUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{24}$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/blocks/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "description": "Id cua ban ghi UserBlock"
+        }
+      ],
+      "delete": {
+        "tags": [
+          "Blocks"
+        ],
+        "summary": "Unblock nguoi dung",
+        "operationId": "unblockUser",
+        "responses": {
+          "204": {
+            "description": "Da unblock"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/conversations": {
+      "get": {
+        "tags": [
+          "Conversations"
+        ],
+        "summary": "Lay danh sach cuoc tro chuyen",
+        "operationId": "listConversations",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/conversations/messages": {
+      "post": {
+        "tags": [
+          "Conversations"
+        ],
+        "summary": "Gui tin nhan",
+        "description": "Gui DM den mot ban be. Dung clientMessageId de dedup: neu trung se tra ve message cu voi deduped=true.",
+        "operationId": "sendMessage",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "recipientId",
+                  "clientMessageId",
+                  "body"
+                ],
+                "properties": {
+                  "recipientId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{24}$"
+                  },
+                  "clientMessageId": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "body": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/conversations/{id}/messages": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "description": "Id cua conversation"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Conversations"
+        ],
+        "summary": "Lay lich su tin nhan (cursor pagination)",
+        "operationId": "listMessages",
+        "parameters": [
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "Lay tin truoc messageId nay"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/conversations/{id}/read": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "Conversations"
+        ],
+        "summary": "Danh dau da doc",
+        "operationId": "markRead",
+        "responses": {
+          "204": {
+            "description": "Da cap nhat trang thai doc"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/feed": {
+      "get": {
+        "tags": [
+          "Feed"
+        ],
+        "summary": "Lay feed hoat dong cua ban be",
+        "description": "Tra ve hoat dong gan nhat cua ban be voi visibility=friends, loai tru nguoi da block.",
+        "operationId": "getFeed",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1578,6 +2480,53 @@
           "message"
         ],
         "additionalProperties": true
+      },
+      "Friendship": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "userA": {
+            "type": "string",
+            "description": "Id nho hon trong cap, dam bao moi cap chi co mot ban ghi"
+          },
+          "userB": {
+            "type": "string",
+            "description": "Id lon hon trong cap"
+          },
+          "requesterId": {
+            "type": "string"
+          },
+          "addresseeId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "declined"
+            ]
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "respondedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       }
     },
     "responses": {
@@ -1643,6 +2592,36 @@
       },
       "NotFound": {
         "description": "Khong tim thay tai nguyen",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Xung dot du lieu",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Vuot gioi han tan suat",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Khong co quyen thuc hien",
         "content": {
           "application/json": {
             "schema": {

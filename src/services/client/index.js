@@ -11,6 +11,13 @@ import studyRoomService from './studyRoom.service.js'
 import roomMediaService from './roomMedia.service.js'
 import studyActivityService from './studyActivity.service.js'
 import dashboardService from './dashboard.service.js'
+import friendService from './friend.service.js'
+import presenceService from './presence.service.js'
+import activityEventService from './activityEvent.service.js'
+import notificationService from './notification.service.js'
+import blockService from './block.service.js'
+import dmService from './dm.service.js'
+import feedService from './feed.service.js'
 
 export {
   userService,
@@ -25,5 +32,12 @@ export {
   studyRoomService,
   roomMediaService,
   studyActivityService,
-  dashboardService
+  dashboardService,
+  friendService,
+  presenceService,
+  activityEventService,
+  notificationService,
+  blockService,
+  dmService,
+  feedService
 }
