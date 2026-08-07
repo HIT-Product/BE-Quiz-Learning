@@ -535,6 +535,9 @@
           },
           "409": {
             "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
           }
         }
       }
@@ -1536,10 +1539,35 @@
           "Study Rooms"
         ],
         "summary": "Tao LiveKit media token",
+        "description": "Can ket noi Socket.IO namespace /study-rooms va room:join thanh cong truoc khi goi. Header x-device-id phai trung voi deviceId cua Socket.IO session.",
         "operationId": "createStudyRoomMediaToken",
+        "parameters": [
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128
+            }
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
           }
         }
       }
@@ -1555,10 +1583,26 @@
           "Study Rooms"
         ],
         "summary": "Dong phong hoc",
+        "description": "Chi host duoc dong. Phong duoc luu lich su voi status closed; goi lai sau khi dong tra ve phong da dong.",
         "operationId": "closeStudyRoom",
         "responses": {
           "200": {
             "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
           }
         }
       }
@@ -2406,6 +2450,70 @@
           "timezone"
         ]
       },
+      "QuizHistoryItem": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "66b5f80d96d27d726b945001"
+          },
+          "deckId": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "_id": {
+                "type": "string",
+                "example": "66b5f80d96d27d726b945002"
+              },
+              "title": {
+                "type": "string",
+                "example": "English vocabulary"
+              }
+            },
+            "required": [
+              "_id",
+              "title"
+            ]
+          },
+          "totalQuestions": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 10
+          },
+          "correctCount": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 8
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "example": 80
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Thoi luong lam quiz tinh bang giay.",
+            "example": 125
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Thoi diem nop va hoan thanh quiz.",
+            "example": "2026-08-07T06:10:00.000Z"
+          }
+        },
+        "required": [
+          "_id",
+          "deckId",
+          "totalQuestions",
+          "correctCount",
+          "score",
+          "durationSeconds",
+          "completedAt"
+        ]
+      },
       "DashboardResponse": {
         "type": "object",
         "properties": {
@@ -2445,8 +2553,7 @@
               "recentAttempts": {
                 "type": "array",
                 "items": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/QuizHistoryItem"
                 }
               }
             },

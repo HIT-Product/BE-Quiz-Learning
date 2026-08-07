@@ -120,10 +120,7 @@ test('active room uniqueness conflict is returned as HTTP 409', async (t) => {
   )
 })
 
-test('room close remains unavailable while media can be connected independently', () => {
-  assert.throws(studyRoomService.close, (error) => {
-    assert.equal(error.statusCode, StatusCodes.SERVICE_UNAVAILABLE)
-    return true
-  })
+test('media token stays separate from the realtime room close lifecycle', () => {
+  assert.equal(typeof studyRoomService.close, 'undefined')
   assert.equal(typeof studyRoomService.mediaToken, 'function')
 })

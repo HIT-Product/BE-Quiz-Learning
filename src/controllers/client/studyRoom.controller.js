@@ -1,6 +1,8 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { studyRoomService } from '../../services/client/index.js'
+import { getIO } from '../../sockets/index.js'
+import { roomRealtimeService } from '../../sockets/services/index.js'
 import { catchAsync, response } from '../../utils/index.js'
 
 const create = catchAsync(async (req, res) => {
@@ -43,7 +45,7 @@ const mediaToken = catchAsync(async (req, res) => {
 })
 
 const close = catchAsync(async (req, res) => {
-  const room = await studyRoomService.close(req.params.id, req.user._id)
+  const room = await roomRealtimeService.closeRoom(getIO().of('/study-rooms'), req.params.id, req.user._id)
   res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Đóng phòng học thành công.', room))
 })
 

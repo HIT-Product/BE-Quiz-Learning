@@ -186,6 +186,24 @@ const registerRoomHandlers = (nsp, socket) => {
   )
 
   socket.on(
+    'room:heartbeat',
+    safeHandler(async (payload) => {
+      const { roomId } = validate(roomIdSchema, payload)
+      const refreshed = await roomSessionService.heartbeat({
+        roomId,
+        userId,
+        socketId: socket.id,
+        deviceId: socket.data.deviceId,
+        generation: socket.data.generation
+      })
+      if (!refreshed) {
+        throw socketError('SESSION_TAKEN_OVER', 'Phien phong hoc da khong con hop le. Hay ket noi lai.')
+      }
+      return { roomId }
+    })
+  )
+
+  socket.on(
     'room:kick',
     safeHandler(async (payload) => {
       const { roomId, targetUserId } = validate(targetSchema, payload)
@@ -219,8 +237,9 @@ const registerRoomHandlers = (nsp, socket) => {
 
   socket.on(
     'room:close',
-    safeHandler(async () => {
-      throw socketError('FEATURE_NOT_READY', 'Tính năng realtime/media tạm thời chưa khả dụng trong lúc nâng cấp.')
+    safeHandler(async (payload) => {
+      const { roomId } = validate(roomIdSchema, payload)
+      return roomRealtimeService.closeRoom(nsp, roomId, userId)
     })
   )
 
