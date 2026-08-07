@@ -1,11 +1,12 @@
 ﻿import roomSessionService from './roomSession.service.js'
 import { redisClient } from '../../configs/index.js'
 import { randomUUID } from 'node:crypto'
+import { StatusCodes } from 'http-status-codes'
 import { pomodoroQueue } from '../../queues/index.js'
-import { logger } from '../../utils/index.js'
+import { ApiError, logger } from '../../utils/index.js'
 import { socketError } from '../utils/socketHandler.js'
 import { studyRoomModel, roomParticipantModel, roomMessageModel, pomodoroSessionModel } from '../../models/index.js'
-import { roomMediaService, studyRoomService } from '../../services/client/index.js'
+import { roomMediaService } from '../../services/client/index.js'
 import { STUDY_ACTIVITY_SOURCE, recordStudyActivity } from '../../services/client/studyActivity.service.js'
 import { serializePomodoroState } from '../contracts/pomodoro.contract.js'
 import {
@@ -190,7 +191,9 @@ const transferHostIfNeeded = async (nsp, roomId, leftUserId) => {
   return payload
 }
 
-const deleteRoomArtifacts = async (roomId) => {
+const closeError = (statusCode, code, message) => Object.assign(new ApiError(statusCode, message), { code })
+
+const clearRealtimeRoomArtifacts = async (roomId, leases) => {
   const studyMarkKeys = await redisClient.keys(`room:${roomId}:study:*`)
   const redisKeys = [
     ROOM_REDIS_KEY.PRESENCE(roomId),
@@ -199,25 +202,50 @@ const deleteRoomArtifacts = async (roomId) => {
     ...studyMarkKeys
   ]
 
-  await Promise.all([
-    roomMessageModel.deleteMany({ roomId }),
-    roomParticipantModel.deleteMany({ roomId }),
-    studyRoomModel.deleteOne({ _id: roomId }),
-    redisKeys.length ? redisClient.del(...redisKeys) : Promise.resolve()
-  ])
+  await Promise.allSettled(
+    leases.flatMap((lease) => [
+      roomSessionService.releaseDevice({
+        userId: lease.userId,
+        socketId: lease.socketId,
+        generation: lease.generation
+      }),
+      roomSessionService.removePresence({
+        roomId,
+        userId: lease.userId,
+        socketId: lease.socketId,
+        generation: lease.generation
+      })
+    ])
+  )
+  if (redisKeys.length) await redisClient.del(...redisKeys)
 }
 
 const closeRoom = async (nsp, roomId, requesterId) => {
   const lockToken = randomUUID()
   const lockKey = ROOM_REDIS_KEY.CLOSE_LOCK(roomId)
   const locked = await redisClient.set(lockKey, lockToken, 'EX', ROOM_CLOSE_LOCK_SECONDS, 'NX')
-  if (locked !== 'OK') return false
+  if (locked !== 'OK') {
+    const room = await studyRoomModel.findById(roomId)
+    if (!room) throw closeError(StatusCodes.NOT_FOUND, 'NOT_FOUND', 'Phong hoc khong ton tai.')
+    if (requesterId && String(room.hostId) !== String(requesterId)) {
+      throw closeError(StatusCodes.FORBIDDEN, 'NOT_HOST', 'Chi chu phong moi duoc dong phong.')
+    }
+    if (room.status === ROOM_STATUS.CLOSED) return room
+    throw closeError(StatusCodes.CONFLICT, 'ROOM_CLOSING', 'Phong hoc dang duoc dong. Vui long thu lai sau.')
+  }
 
   try {
+    const existingRoom = await studyRoomModel.findById(roomId)
+    if (!existingRoom) throw closeError(StatusCodes.NOT_FOUND, 'NOT_FOUND', 'Phong hoc khong ton tai.')
+    if (requesterId && String(existingRoom.hostId) !== String(requesterId)) {
+      throw closeError(StatusCodes.FORBIDDEN, 'NOT_HOST', 'Chi chu phong moi duoc dong phong.')
+    }
+    if (existingRoom.status === ROOM_STATUS.CLOSED) return existingRoom
+
     const room = await studyRoomModel.findOneAndUpdate(
       {
         _id: roomId,
-        status: ROOM_STATUS.OPEN,
+        status: { $in: [ROOM_STATUS.OPEN, ROOM_STATUS.CLOSING] },
         ...(requesterId ? { hostId: requesterId } : {})
       },
       { $set: { status: ROOM_STATUS.CLOSING } },
@@ -225,10 +253,9 @@ const closeRoom = async (nsp, roomId, requesterId) => {
     )
 
     if (!room) {
-      const exists = await studyRoomModel.exists({ _id: roomId })
-      if (!exists) return false
-      if (requesterId) throw socketError('NOT_HOST', 'Chi chu phong moi duoc dong phong.')
-      return false
+      const currentRoom = await studyRoomModel.findById(roomId)
+      if (currentRoom?.status === ROOM_STATUS.CLOSED) return currentRoom
+      throw closeError(StatusCodes.CONFLICT, 'ROOM_CLOSING', 'Phong hoc dang duoc dong. Vui long thu lai sau.')
     }
 
     const pomo = await redisClient.hgetall(ROOM_REDIS_KEY.POMODORO(roomId))
@@ -240,14 +267,25 @@ const closeRoom = async (nsp, roomId, requesterId) => {
     await settleAllStudyTime(roomId)
     await flushLeaderboardToDB(roomId)
     await pomodoroSessionModel.updateMany({ roomId, endedAt: null }, { $set: { endedAt: new Date() } })
-    await roomParticipantModel.updateMany({ roomId, leftAt: null }, { $set: { leftAt: new Date() } })
+    const closedAt = new Date()
+    await roomParticipantModel.updateMany(
+      { roomId, leftAt: null },
+      { $set: { leftAt: closedAt, joinExpiresAt: null } }
+    )
     await roomMediaService.deleteRoom(roomId)
+
+    const leases = await roomSessionService.listPresenceEntries(roomId)
+    const closedRoom = await studyRoomModel.findByIdAndUpdate(
+      roomId,
+      { $set: { status: ROOM_STATUS.CLOSED, closedAt, emptySince: null } },
+      { new: true }
+    )
 
     nsp.to(`room:${roomId}`).emit('room:closed', { roomId })
     nsp.in(`room:${roomId}`).socketsLeave(`room:${roomId}`)
 
-    await deleteRoomArtifacts(roomId)
-    return { ...room.toObject(), status: ROOM_STATUS.CLOSED, closedAt: new Date() }
+    await clearRealtimeRoomArtifacts(roomId, leases)
+    return closedRoom
   } finally {
     const unlockLua = `
       if redis.call('GET', KEYS[1]) == ARGV[1] then

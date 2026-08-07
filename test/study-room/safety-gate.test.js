@@ -27,23 +27,45 @@ test('empty-room lifecycle updates emptySince without invoking legacy close', as
   assert.doesNotMatch(match[1], /closeRoom|deleteRoomArtifacts/)
 })
 
-test('socket join marks the room occupied and socket close returns FEATURE_NOT_READY', async () => {
+test('socket join marks the room occupied while heartbeat and close use the realtime lifecycle', async () => {
   const source = await readSource('src/sockets/handlers/room.handler.js')
   const closeHandler = source.match(/socket\.on\(\s*'room:close',[\s\S]*?\n\s*\)\s*\n\s*\n\s*socket\.on\('disconnect'/)
 
   assert.match(source, /markRoomOccupied\(roomId\)/)
+  assert.match(source, /'room:heartbeat'/)
+  assert.match(source, /roomSessionService\.heartbeat/)
   assert.ok(closeHandler)
-  assert.match(closeHandler[0], /FEATURE_NOT_READY/)
-  assert.doesNotMatch(closeHandler[0], /closeRoom/)
+  assert.match(closeHandler[0], /roomRealtimeService\.closeRoom/)
+  assert.doesNotMatch(closeHandler[0], /FEATURE_NOT_READY/)
 })
 
-test('REST study-room service delegates media tokens and keeps room close gated', async () => {
-  const source = await readSource('src/services/client/studyRoom.service.js')
+test('REST close delegates to realtime lifecycle while media remains a separate service', async () => {
+  const [service, controller] = await Promise.all([
+    readSource('src/services/client/studyRoom.service.js'),
+    readSource('src/controllers/client/studyRoom.controller.js')
+  ])
 
-  assert.doesNotMatch(source, /redisClient|ROOM_REDIS_KEY/)
-  assert.doesNotMatch(source, /AccessToken|TrackSource|livekit-server-sdk/)
-  assert.match(source, /roomMediaService\.issueParticipantToken/)
-  assert.match(source, /const close = featureNotReady/)
+  assert.doesNotMatch(service, /redisClient|ROOM_REDIS_KEY/)
+  assert.doesNotMatch(service, /AccessToken|TrackSource|livekit-server-sdk/)
+  assert.match(service, /roomMediaService\.issueParticipantToken/)
+  assert.match(controller, /getIO\(\)\.of\('\/study-rooms'\)/)
+  assert.match(controller, /roomRealtimeService\.closeRoom/)
+})
+
+test('close archives persisted records and releases only ephemeral room resources', async () => {
+  const source = await readSource('src/sockets/services/roomRealtime.service.js')
+  const closeSection = source.match(/const closeRoom =[\s\S]*?(?=const closeIdleRooms)/)
+
+  assert.ok(closeSection)
+  assert.match(source, /const clearRealtimeRoomArtifacts/)
+  assert.match(closeSection[0], /status: ROOM_STATUS\.CLOSED/)
+  assert.match(closeSection[0], /closedAt/)
+  assert.match(closeSection[0], /roomSessionService\.listPresenceEntries/)
+  assert.match(closeSection[0], /roomMediaService\.deleteRoom/)
+  assert.match(closeSection[0], /return existingRoom/)
+  assert.doesNotMatch(source, /roomMessageModel\.deleteMany\(\{ roomId \}\)/)
+  assert.doesNotMatch(source, /roomParticipantModel\.deleteMany\(\{ roomId \}\)/)
+  assert.doesNotMatch(source, /studyRoomModel\.deleteOne\(\{ _id: roomId \}\)/)
 })
 
 test('media grants are derived from room policy and bound to the active device lease', async () => {
