@@ -3234,7 +3234,7 @@
               }
             ],
             "url": "{{baseUrl}}/study-rooms/{{studyRoomId}}/media-token",
-            "description": "Tao token LiveKit. Yeu cau phien phong dang active tren cung deviceId; hay ket noi Socket.IO namespace /study-rooms truoc khi goi. Response tra token va url."
+            "description": "Tao token LiveKit. Truoc khi goi, ket noi Socket.IO namespace /study-rooms voi auth { token, deviceId }, emit room:join va cho ack ok=true. x-device-id phai trung deviceId cua socket. Gui room:heartbeat moi 25 giay de giu lease; goi REST truc tiep tu Postman se nhan 409. Response tra token va url."
           }
         },
         {
@@ -3248,7 +3248,7 @@
               }
             ],
             "url": "{{baseUrl}}/study-rooms/{{studyRoomId}}/close",
-            "description": "Dong phong. Chi chu phong co quyen goi endpoint nay."
+            "description": "Dong phong va luu lich su room, participant, chat, study time. Chi chu phong co quyen goi. Goi lai sau khi dong tra 200 voi phong status closed; neu mot lenh dong khac dang xu ly thi co the nhan 409 ROOM_CLOSING."
           }
         }
       ]

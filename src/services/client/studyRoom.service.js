@@ -155,13 +155,6 @@ const leaderboard = async (roomId, userId) => {
     .lean()
 }
 
-const featureNotReady = () => {
-  throw new ApiError(
-    StatusCodes.SERVICE_UNAVAILABLE,
-    'Tính năng realtime/media tạm thời chưa khả dụng trong lúc nâng cấp.'
-  )
-}
-
 // [POST] /study-rooms/:id/media-token
 const mediaToken = async (roomId, userId, { deviceId, sessionId }) => {
   const room = await findOpenRoom(roomId)
@@ -179,9 +172,6 @@ const mediaToken = async (roomId, userId, { deviceId, sessionId }) => {
     sessionId
   })
 }
-
-// [PATCH] /study-rooms/:id/close
-const close = featureNotReady
 
 const reservationExpiry = () => new Date(Date.now() + ROOM_LIMITS.JOIN_RESERVATION_SECONDS * 1000)
 
@@ -226,7 +216,6 @@ export default {
   listMessages,
   leaderboard,
   mediaToken,
-  close,
   assertParticipant,
   assertActiveParticipant,
   findOpenRoom
