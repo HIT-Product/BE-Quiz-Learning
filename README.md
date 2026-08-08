@@ -48,13 +48,23 @@ CLIENT_URL=http://localhost:5173
 
 # Database
 MONGO_URI=mongodb://localhost:27017/quiz-learning
+MONGO_HOST=mongo
+MONGO_PORT=27017
+MONGO_DATABASE=hitproduct
+MONGO_USERNAME=hitproduct
+MONGO_PASSWORD=
 
 # Bcrypt
 SALT_ROUNDS=10
 
 # Email
+EMAIL_SMTP_USER=
+EMAIL_SMTP_PASS=
 EMAIL_USER=
 EMAIL_PASS=
+EMAIL_SMTP_HOST=smtp.titan.email
+EMAIL_SMTP_PORT=465
+EMAIL_SMTP_SECURE=true
 
 # JWT
 JWT_SECRET_LOGIN=replace-with-a-long-random-secret
@@ -138,7 +148,7 @@ Chạy toàn bộ API, worker và Redis local:
 ```bash
 docker compose up -d --build
 docker compose ps
-docker compose logs -f api worker redis
+docker compose logs -f api worker redis mongo
 ```
 
 Chỉ chạy Redis để API/worker tiếp tục chạy bằng npm hoặc PM2:
@@ -157,7 +167,7 @@ docker build -t vanphuoc0443/hitproduct-api:latest .
 docker push vanphuoc0443/hitproduct-api:latest
 ```
 
-Máy nhận chỉ cần `compose.prod.yaml` và `.env`. Trong `.env`, đặt `HITPRODUCT_IMAGE`, `MONGO_URI`, `REDIS_PASSWORD` và các secret ứng dụng, sau đó chạy:
+Máy nhận chỉ cần Docker, `compose.prod.yaml` và `.env`; không cần cài MongoDB trực tiếp. Trong `.env`, đặt `HITPRODUCT_IMAGE`, `MONGO_USERNAME`, `MONGO_PASSWORD`, `REDIS_PASSWORD` và các secret ứng dụng. Để `MONGO_URI` trống để API dùng MongoDB nội bộ; dùng mật khẩu Mongo URL-safe, sau đó chạy:
 
 ```bash
 docker compose -f compose.prod.yaml pull

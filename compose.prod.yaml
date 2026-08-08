@@ -1,7 +1,8 @@
 # Required in .env:
 # HITPRODUCT_IMAGE=<dockerhub-user>/hitproduct-api:<version>
 # REDIS_PASSWORD=<strong-password>
-# MONGO_URI=<MongoDB Atlas or reachable MongoDB URI>
+# MONGO_USERNAME=<mongo-admin-user>
+# MONGO_PASSWORD=<strong-url-safe-password>
 name: hitproduct-prod
 
 x-app: &app
@@ -13,6 +14,8 @@ x-app: &app
   restart: unless-stopped
   depends_on:
     redis:
+      condition: service_healthy
+    mongo:
       condition: service_healthy
   extra_hosts:
     - 'host.docker.internal:host-gateway'
@@ -36,6 +39,12 @@ services:
       REDIS_PORT: 6379
       REDIS_USERNAME: ''
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+      MONGO_URI: ''
+      MONGO_HOST: mongo
+      MONGO_PORT: 27017
+      MONGO_DATABASE: ${MONGO_DATABASE:-hitproduct}
+      MONGO_USERNAME: ${MONGO_USERNAME:?Set MONGO_USERNAME in .env}
+      MONGO_PASSWORD: ${MONGO_PASSWORD:?Set MONGO_PASSWORD in .env}
       NODE_OPTIONS: --max-old-space-size=240
       LOG_TO_FILE: 'false'
     ports:
@@ -65,6 +74,12 @@ services:
       REDIS_PORT: 6379
       REDIS_USERNAME: ''
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+      MONGO_URI: ''
+      MONGO_HOST: mongo
+      MONGO_PORT: 27017
+      MONGO_DATABASE: ${MONGO_DATABASE:-hitproduct}
+      MONGO_USERNAME: ${MONGO_USERNAME:?Set MONGO_USERNAME in .env}
+      MONGO_PASSWORD: ${MONGO_PASSWORD:?Set MONGO_PASSWORD in .env}
       NODE_OPTIONS: --max-old-space-size=112
       LOG_TO_FILE: 'false'
     mem_limit: 150m
@@ -107,5 +122,36 @@ services:
         max-size: 10m
         max-file: '3'
 
+  mongo:
+    image: mongo:7
+    pull_policy: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:?Set MONGO_USERNAME in .env}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?Set MONGO_PASSWORD in .env}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-hitproduct}
+    volumes:
+      - mongo_data:/data/db
+    mem_limit: 512m
+    cpus: 0.5
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'mongosh --quiet --username "$$MONGO_INITDB_ROOT_USERNAME" --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.adminCommand({ ping: 1 })"'
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+
 volumes:
   redis_data:
+  mongo_data:
