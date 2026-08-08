@@ -62,6 +62,7 @@ test('close archives persisted records and releases only ephemeral room resource
   assert.match(closeSection[0], /closedAt/)
   assert.match(closeSection[0], /roomSessionService\.listPresenceEntries/)
   assert.match(closeSection[0], /roomMediaService\.deleteRoom/)
+  assert.match(closeSection[0], /LiveKit room cleanup failed during close/)
   assert.match(closeSection[0], /return existingRoom/)
   assert.doesNotMatch(source, /roomMessageModel\.deleteMany\(\{ roomId \}\)/)
   assert.doesNotMatch(source, /roomParticipantModel\.deleteMany\(\{ roomId \}\)/)
