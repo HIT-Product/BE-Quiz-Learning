@@ -24,6 +24,12 @@ dist
 
 # Log
 logs
+.tmp-*.log
+cloudflare-fe.*.log
+
+# Temp / scratch
+.tmp-*.mjs
+docs/~$*
 
 # Static
 uploads/*
@@ -31,5 +37,8 @@ images/*
 static/*
 errors/*
 docker/*
-logs/*
-**/*.json
+
+# Personal notes / scratch files
+.note/
+Untitled.png
+*.png

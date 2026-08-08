@@ -1,13 +1,22 @@
 import morgan from 'morgan'
+
+import {
+  HTTP_STATUS_FALLBACK,
+  HTTP_STATUS_LEVEL,
+  MORGAN_FORMAT,
+  MORGAN_STATUS_PATTERN,
+  MORGAN_TOKEN,
+  NUMBER_PARSE_RADIX
+} from '../constants/index.js'
 import { logger } from '../utils/index.js'
 
 const stream = {
   write: (message) => {
-    const statusCode = parseInt(message.match(/(?<= \[)\d+(?=\])/g)?.[0] || '200', 10)
+    const statusCode = parseInt(message.match(MORGAN_STATUS_PATTERN)?.[0] || HTTP_STATUS_FALLBACK, NUMBER_PARSE_RADIX)
 
-    if (statusCode >= 500) {
+    if (statusCode >= HTTP_STATUS_LEVEL.ERROR) {
       logger.error(message.trim())
-    } else if (statusCode >= 400) {
+    } else if (statusCode >= HTTP_STATUS_LEVEL.WARN) {
       logger.warn(message.trim())
     } else {
       logger.info(message.trim())
@@ -15,10 +24,10 @@ const stream = {
   }
 }
 
-morgan.token('body', (req) => JSON.stringify(req.body))
-morgan.token('params', (req) => JSON.stringify(req.params))
+morgan.token(MORGAN_TOKEN.BODY, (req) => JSON.stringify(req.body))
+morgan.token(MORGAN_TOKEN.PARAMS, (req) => JSON.stringify(req.params))
 
-const morganMiddleware = morgan('[:method] [:status] :url :response-time ms - Params: :params - Body: :body', {
+const morganMiddleware = morgan(MORGAN_FORMAT, {
   stream
 })
 

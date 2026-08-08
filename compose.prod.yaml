@@ -1,0 +1,157 @@
+# Required in .env:
+# HITPRODUCT_IMAGE=<dockerhub-user>/hitproduct-api:<version>
+# REDIS_PASSWORD=<strong-password>
+# MONGO_USERNAME=<mongo-admin-user>
+# MONGO_PASSWORD=<strong-url-safe-password>
+name: hitproduct-prod
+
+x-app: &app
+  image: ${HITPRODUCT_IMAGE:?Set HITPRODUCT_IMAGE in .env}
+  pull_policy: always
+  env_file:
+    - .env
+  init: true
+  restart: unless-stopped
+  depends_on:
+    redis:
+      condition: service_healthy
+    mongo:
+      condition: service_healthy
+  extra_hosts:
+    - 'host.docker.internal:host-gateway'
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: '3'
+
+services:
+  api:
+    <<: *app
+    command: ['node', 'src/server.js']
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_USERNAME: ''
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+      MONGO_URI: ''
+      MONGO_HOST: mongo
+      MONGO_PORT: 27017
+      MONGO_DATABASE: ${MONGO_DATABASE:-hitproduct}
+      MONGO_USERNAME: ${MONGO_USERNAME:?Set MONGO_USERNAME in .env}
+      MONGO_PASSWORD: ${MONGO_PASSWORD:?Set MONGO_PASSWORD in .env}
+      NODE_OPTIONS: --max-old-space-size=240
+      LOG_TO_FILE: 'false'
+    ports:
+      - '${PORT:-3000}:3000'
+    mem_limit: 300m
+    cpus: 0.75
+    stop_grace_period: 15s
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  worker:
+    <<: *app
+    command: ['node', 'src/worker.js']
+    environment:
+      NODE_ENV: production
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_USERNAME: ''
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+      MONGO_URI: ''
+      MONGO_HOST: mongo
+      MONGO_PORT: 27017
+      MONGO_DATABASE: ${MONGO_DATABASE:-hitproduct}
+      MONGO_USERNAME: ${MONGO_USERNAME:?Set MONGO_USERNAME in .env}
+      MONGO_PASSWORD: ${MONGO_PASSWORD:?Set MONGO_PASSWORD in .env}
+      NODE_OPTIONS: --max-old-space-size=112
+      LOG_TO_FILE: 'false'
+    mem_limit: 150m
+    cpus: 0.35
+    stop_grace_period: 15s
+
+  redis:
+    image: redis:7.4-alpine
+    pull_policy: always
+    command:
+      - redis-server
+      - --appendonly
+      - 'yes'
+      - --appendfsync
+      - everysec
+      - --maxmemory
+      - 96mb
+      - --maxmemory-policy
+      - noeviction
+      - --requirepass
+      - ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+    volumes:
+      - redis_data:/data
+    mem_limit: 160m
+    cpus: 0.25
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli --no-auth-warning -a "$$REDIS_PASSWORD" ping | grep PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+
+  mongo:
+    image: mongo:7
+    pull_policy: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:?Set MONGO_USERNAME in .env}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?Set MONGO_PASSWORD in .env}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-hitproduct}
+    volumes:
+      - mongo_data:/data/db
+    mem_limit: 512m
+    cpus: 0.5
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'mongosh --quiet --username "$$MONGO_INITDB_ROOT_USERNAME" --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.adminCommand({ ping: 1 })"'
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+
+volumes:
+  redis_data:
+  mongo_data:

@@ -1,0 +1,12 @@
+const DECK_VISIBILITY = {
+  PRIVATE: 'private',
+  PUBLIC: 'public'
+}
+
+const DECK_VISIBILITIES = Object.values(DECK_VISIBILITY)
+
+const DECK_LIMITS = {
+  TITLE_MAX_LENGTH: 200
+}
+
+export { DECK_VISIBILITY, DECK_VISIBILITIES, DECK_LIMITS }

@@ -1,0 +1,55 @@
+const QUEUE_NAME = {
+  EMAIL: 'email',
+  POMODORO: 'pomodoro',
+  ROOM_MAINTENANCE: 'room-maintenance'
+}
+
+const EMAIL_JOB_NAME = {
+  RESET_PASSWORD: 'reset-password',
+  REGISTER_OTP: 'register-otp',
+  WELCOME: 'welcome'
+}
+
+const POMODORO_JOB_NAME = {
+  PHASE_END: 'phase-end'
+}
+
+const ROOM_MAINTENANCE_JOB_NAME = {
+  CLOSE_IDLE_ROOMS: 'close-idle-rooms'
+}
+
+const ROOM_MAINTENANCE_SCHEDULER_ID = {
+  CLOSE_IDLE_ROOMS: 'close-idle-rooms-every-15m'
+}
+
+const ROOM_MAINTENANCE_QUEUE_OPTIONS = {
+  CLOSE_IDLE_EVERY_MS: 15 * 60 * 1000,
+  CONCURRENCY: 1
+}
+
+const QUEUE_EVENT = {
+  COMPLETED: 'completed',
+  FAILED: 'failed'
+}
+
+const QUEUE_BACKOFF_TYPE = {
+  EXPONENTIAL: 'exponential'
+}
+
+const EMAIL_QUEUE_OPTIONS = {
+  ATTEMPTS: 3,
+  BACKOFF_DELAY: 1000,
+  REMOVE_ON_COMPLETE: true
+}
+
+export {
+  QUEUE_NAME,
+  EMAIL_JOB_NAME,
+  POMODORO_JOB_NAME,
+  ROOM_MAINTENANCE_JOB_NAME,
+  ROOM_MAINTENANCE_SCHEDULER_ID,
+  ROOM_MAINTENANCE_QUEUE_OPTIONS,
+  QUEUE_EVENT,
+  QUEUE_BACKOFF_TYPE,
+  EMAIL_QUEUE_OPTIONS
+}
