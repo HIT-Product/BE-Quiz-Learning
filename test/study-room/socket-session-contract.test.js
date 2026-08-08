@@ -20,3 +20,20 @@ test('room join maps expected lease conflicts to client-safe socket errors', asy
     assert.match(source, new RegExp(`${status}:`))
   }
 })
+
+test('room leave is idempotent and stale sockets cannot clear a newer device session', async () => {
+  const source = await readFile(handlerPath, 'utf8')
+  const finishLeave = source.match(/const finishLeave =[\s\S]*?(?=const assertClaimAccepted)/)
+  const leaveHandler = source.match(
+    /socket\.on\(\s*'room:leave',[\s\S]*?\n\s*\)\s*\n\s*\n\s*socket\.on\(\s*'leaderboard:get'/
+  )
+
+  assert.ok(finishLeave)
+  assert.ok(leaveHandler)
+  assert.match(finishLeave[0], /roomSessionService\.releaseDevice/)
+  assert.match(finishLeave[0], /roomSessionService\.getActiveDevice/)
+  assert.match(finishLeave[0], /stale: true/)
+  assert.match(finishLeave[0], /markParticipantLeft/)
+  assert.match(finishLeave[0], /socket\.data\.roomId = null/)
+  assert.doesNotMatch(leaveHandler[0], /assertDeviceOwner/)
+})

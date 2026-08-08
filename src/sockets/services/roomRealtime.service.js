@@ -268,11 +268,14 @@ const closeRoom = async (nsp, roomId, requesterId) => {
     await flushLeaderboardToDB(roomId)
     await pomodoroSessionModel.updateMany({ roomId, endedAt: null }, { $set: { endedAt: new Date() } })
     const closedAt = new Date()
-    await roomParticipantModel.updateMany(
-      { roomId, leftAt: null },
-      { $set: { leftAt: closedAt, joinExpiresAt: null } }
-    )
-    await roomMediaService.deleteRoom(roomId)
+    await roomParticipantModel.updateMany({ roomId, leftAt: null }, { $set: { leftAt: closedAt, joinExpiresAt: null } })
+    try {
+      await roomMediaService.deleteRoom(roomId)
+    } catch (error) {
+      // Media cleanup is best-effort. A LiveKit outage must not prevent the
+      // persisted room lifecycle from reaching CLOSED.
+      logger.warn(`LiveKit room cleanup failed during close: room=${roomId} error=${error.message}`)
+    }
 
     const leases = await roomSessionService.listPresenceEntries(roomId)
     const closedRoom = await studyRoomModel.findByIdAndUpdate(
