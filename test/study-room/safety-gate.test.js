@@ -2,8 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
-const readSource = (relativePath) =>
-  readFile(new URL(`../../${relativePath}`, import.meta.url), 'utf8')
+const readSource = (relativePath) => readFile(new URL(`../../${relativePath}`, import.meta.url), 'utf8')
 
 test('server disables and drains the legacy close scheduler before listening', async () => {
   const source = await readSource('src/server.js')
@@ -62,6 +61,7 @@ test('close archives persisted records and releases only ephemeral room resource
   assert.match(closeSection[0], /closedAt/)
   assert.match(closeSection[0], /roomSessionService\.listPresenceEntries/)
   assert.match(closeSection[0], /roomMediaService\.deleteRoom/)
+  assert.match(closeSection[0], /LiveKit room cleanup failed during close/)
   assert.match(closeSection[0], /return existingRoom/)
   assert.doesNotMatch(source, /roomMessageModel\.deleteMany\(\{ roomId \}\)/)
   assert.doesNotMatch(source, /roomParticipantModel\.deleteMany\(\{ roomId \}\)/)
@@ -81,7 +81,10 @@ test('media grants are derived from room policy and bound to the active device l
   assert.match(source, /room: String\(room\._id\)/)
   assert.match(source, /if \(allowMicrophone\) sources\.push\(TrackSource\.MICROPHONE\)/)
   assert.match(source, /if \(allowCamera\) sources\.push\(TrackSource\.CAMERA\)/)
-  assert.match(source, /if \(allowScreenShare\) sources\.push\(TrackSource\.SCREEN_SHARE, TrackSource\.SCREEN_SHARE_AUDIO\)/)
+  assert.match(
+    source,
+    /if \(allowScreenShare\) sources\.push\(TrackSource\.SCREEN_SHARE, TrackSource\.SCREEN_SHARE_AUDIO\)/
+  )
   assert.doesNotMatch(source, /identity\s*=\s*`[^`]*:/)
 })
 

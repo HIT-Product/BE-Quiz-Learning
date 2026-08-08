@@ -27,16 +27,25 @@ const validate = (schema, payload) => {
   return value
 }
 
-const finishLeave = async (nsp, socket, roomId, userId, { releaseDevice = true } = {}) => {
+const finishLeave = async (nsp, socket, roomId, userId) => {
   const generation = socket.data.generation
   const socketId = socket.id
 
-  if (releaseDevice) {
-    await roomSessionService.releaseDevice({ userId, socketId, generation })
+  // Stop delivering room events immediately. Keep roomId on socket.data until
+  // persistent/session cleanup succeeds so disconnect grace can safely retry.
+  socket.leave(`room:${roomId}`)
+
+  const released = await roomSessionService.releaseDevice({ userId, socketId, generation })
+  if (!released) {
+    const active = await roomSessionService.getActiveDevice(userId)
+    if (active) {
+      // A newer device generation owns the room. The stale socket may leave
+      // locally, but it must never mark the newer participant session as left.
+      socket.data.roomId = null
+      return { roomId: String(roomId), left: false, stale: true }
+    }
   }
 
-  socket.leave(`room:${roomId}`)
-  socket.data.roomId = null
   await roomRealtimeService.settleStudyTime(roomId, userId)
   await roomRealtimeService.markParticipantLeft(roomId, userId)
 
@@ -53,6 +62,10 @@ const finishLeave = async (nsp, socket, roomId, userId, { releaseDevice = true }
   } else {
     await roomRealtimeService.markRoomBecameEmpty(roomId)
   }
+
+  socket.data.roomId = null
+  socket.data.generation = null
+  return { roomId: String(roomId), left: true, stale: false }
 }
 
 const assertClaimAccepted = (claim) => {
@@ -158,15 +171,13 @@ const registerRoomHandlers = (nsp, socket) => {
     'room:leave',
     safeHandler(async (payload) => {
       const { roomId } = validate(roomIdSchema, payload)
-      await roomSessionService.assertDeviceOwner({
-        userId,
-        roomId,
-        socketId: socket.id,
-        generation: socket.data.generation,
-        deviceId: socket.data.deviceId
-      })
-      await finishLeave(nsp, socket, roomId, userId)
-      return { roomId }
+      if (!socket.data.roomId) {
+        return { roomId: String(roomId), left: false, alreadyLeft: true }
+      }
+      if (String(socket.data.roomId) !== String(roomId)) {
+        throw socketError('INVALID_PAYLOAD', 'Socket khong thuoc phong hoc nay.')
+      }
+      return finishLeave(nsp, socket, roomId, userId)
     })
   )
 
@@ -249,14 +260,6 @@ const registerRoomHandlers = (nsp, socket) => {
 
     setTimeout(async () => {
       try {
-        const stillOwner = await roomSessionService.isDeviceOwner({
-          userId,
-          roomId,
-          socketId: socket.id,
-          generation: socket.data.generation,
-          deviceId: socket.data.deviceId
-        })
-        if (!stillOwner) return
         await finishLeave(nsp, socket, roomId, userId)
         logger.info(`Disconnect grace cleanup: room=${roomId} user=${userId} reason=${reason}`)
       } catch (error) {
