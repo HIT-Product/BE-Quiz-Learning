@@ -1,0 +1,108 @@
+const LEARNING_STATUS = {
+  NEW: 'new',
+  LEARNING: 'learning',
+  REMEMBERED: 'remembered'
+}
+
+const LEARNING_STATUSES = Object.values(LEARNING_STATUS)
+
+const QUESTION_TYPE = {
+  MULTIPLE_CHOICE: 'multiple_choice',
+  TRUE_FALSE: 'true_false',
+  WRITTEN: 'written',
+  FLASHCARD: 'flashcard'
+}
+
+const TRUE_FALSE_ANSWER = {
+  TRUE: 'true',
+  FALSE: 'false'
+}
+
+const QUIZ_QUESTION_TYPES = [QUESTION_TYPE.MULTIPLE_CHOICE, QUESTION_TYPE.TRUE_FALSE, QUESTION_TYPE.WRITTEN]
+const LEARN_QUESTION_TYPES = QUIZ_QUESTION_TYPES
+
+// Mức độ chấm tự luận trong learn session
+const WRITTEN_GRADE_MODE = {
+  STRICT: 'strict', // Chỉ bỏ hoa và chấm cuối câu
+  MODERATE: 'moderate', // Levenshtein <= 15% độ dài
+  LOOSE: 'loose' // Bỏ dấu tiếng Việt và dùng ngưỡng sai lớn hơn (Levenshtein <= 25%)
+}
+
+const LEARN_SESSION_MODE = {
+  CRAM: 'cram',
+  MASTER: 'master'
+}
+
+const LEARN_SESSION_STATUS = {
+  IN_PROGRESS: 'in_progress',
+  COMPLETED: 'completed'
+}
+
+const LEARN_ANSWER_SIDE = {
+  FRONT: 'front',
+  BACK: 'back'
+}
+
+const LEARN_SCOPE = {
+  ALL: 'all',
+  STARRED: 'starred',
+  UNLEARNED: 'unlearned'
+}
+
+const LEARN_OUTCOME = {
+  CORRECT: 'correct',
+  WRONG: 'wrong',
+  DONTKNOW: 'dontknow',
+  FLASH_KNOWN: 'flash_known',
+  FLASH_UNKNOWN: 'flash_unknown'
+}
+
+const LEARN_SESSION_LIMITS = {
+  GAP_WRONG: 2,
+  GAP_DONTKNOW: 2,
+  GAP_CORRECT: 6,
+  HARDEST_CARDS_COUNT: 5,
+  BLOCK_SIZE_MIN: 1,
+  BLOCK_SIZE_MAX: 50,
+  ACTIVE_SET_SIZE_MIN: 1,
+  ACTIVE_SET_SIZE_MAX: 50,
+  SESSION_LIMIT_MIN: 1,
+  SESSION_LIMIT_MAX: 500,
+  TIME_TARGET_MIN: 1,
+  TIME_TARGET_MAX: 600,
+  LEVENSHTEIN_MAX_LEN: 64,
+  MIN_CARDS_FOR_MC_OR_TF: 2,
+  CRAM_BLOCK_SIZE: 12,
+  CRAM_ACTIVE_SET_SIZE: 12,
+  CRAM_MASTERY_TARGET: 1,
+  MASTER_BLOCK_SIZE: 7,
+  MASTER_ACTIVE_SET_SIZE: 7
+}
+
+const QUESTION_LIMITS = {
+  MULTIPLE_CHOICE_OPTION_COUNT: 4,
+  DEFAULT_QUIZ_LIMIT: 10,
+  DEFAULT_LEARN_LIMIT: 10,
+  QUIZ_MAX_LIMIT: 100,
+  LEARN_MAX_LIMIT: 50,
+  SUBMIT_MAX_ANSWERS: 200,
+  ANSWER_MAX_LENGTH: 2000,
+  SCORE_PERCENT_MAX: 100
+}
+
+export {
+  LEARNING_STATUS,
+  LEARNING_STATUSES,
+  QUESTION_TYPE,
+  TRUE_FALSE_ANSWER,
+  QUIZ_QUESTION_TYPES,
+  LEARN_QUESTION_TYPES,
+  QUESTION_LIMITS,
+  WRITTEN_GRADE_MODE,
+  LEARN_SESSION_MODE,
+  LEARN_SESSION_STATUS,
+  LEARN_ANSWER_SIDE,
+  LEARN_SCOPE,
+  LEARN_OUTCOME,
+  LEARN_SESSION_LIMITS
+}

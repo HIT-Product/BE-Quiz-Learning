@@ -1,49 +1,70 @@
 import mongoose, { model } from 'mongoose'
 
+import {
+  ACTIVITY_VISIBILITY,
+  FRIEND_REQUEST_POLICY,
+  USER_LIMITS
+} from '../constants/index.js'
+
 const userSchema = new mongoose.Schema(
   {
-    username: {
-      type: String,
-      unique: true
-    },
     email: {
       type: String,
       unique: true,
+      required: true,
       lowercase: true,
       trim: true
     },
-    password: {
-      type: String
-    },
-    avatar: {
+    passwordHash: {
       type: String,
-      default: 'https://default-avatar-url.com/avatar.png'
+      required: true
     },
-    fullName: {
+    displayName: {
       type: String,
+      required: true,
       trim: true,
-      default: ''
+      maxlength: USER_LIMITS.DISPLAY_NAME_MAX_LENGTH
     },
-    bio: {
+    avatarUrl: {
       type: String,
-      default: ''
+      default: null
     },
-    role: {
+    defaultQuizSize: {
+      type: Number,
+      default: USER_LIMITS.DEFAULT_QUIZ_SIZE
+    },
+    username: {
       type: String,
-      default: 'user'
+      default: null,
+      trim: true,
+      lowercase: true,
+      minlength: USER_LIMITS.USERNAME_MIN_LENGTH,
+      maxlength: USER_LIMITS.USERNAME_MAX_LENGTH
     },
-    totalStudyTime: {
-      type: Number,
-      default: 0
+    usernameUpdatedAt: {
+      type: Date,
+      default: null
     },
-    streakDays: {
-      type: Number,
-      default: 0
+    activityVisibility: {
+      type: String,
+      enum: Object.values(ACTIVITY_VISIBILITY),
+      default: ACTIVITY_VISIBILITY.FRIENDS
+    },
+    friendRequestPolicy: {
+      type: String,
+      enum: Object.values(FRIEND_REQUEST_POLICY),
+      default: FRIEND_REQUEST_POLICY.EVERYONE
     }
   },
   {
     timestamps: true
   }
 )
+
+userSchema.index(
+  { username: 1 },
+  { unique: true, partialFilterExpression: { username: { $type: 'string' } } }
+)
+userSchema.index({ displayName: 'text' })
 
 export default model('User', userSchema)

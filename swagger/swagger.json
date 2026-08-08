@@ -1,0 +1,2742 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "HITProduct API",
+    "version": "1.0.0",
+    "description": "Tai lieu OpenAPI doc lap cho Quiz Learning API."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api/v1",
+      "description": "Local development"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Dang ky, dang nhap va quan ly phien"
+    },
+    {
+      "name": "Users",
+      "description": "Thong tin tai khoan hien tai"
+    },
+    {
+      "name": "Folders",
+      "description": "Quan ly thu muc bo the"
+    },
+    {
+      "name": "Decks",
+      "description": "Quan ly va tim kiem bo the"
+    },
+    {
+      "name": "Flashcards",
+      "description": "Quan ly va import the hoc"
+    },
+    {
+      "name": "Quiz",
+      "description": "Tao va nop bai quiz"
+    },
+    {
+      "name": "Learn",
+      "description": "Hoc theo vong va phien co the tiep tuc"
+    },
+    {
+      "name": "Study",
+      "description": "On tap theo lich"
+    },
+    {
+      "name": "Study Rooms",
+      "description": "Phong hoc thoi gian thuc"
+    },
+    {
+      "name": "Dashboard",
+      "description": "Tong quan hoc tap ca nhan va study streak"
+    },
+    {
+      "name": "Friends",
+      "description": "Ket ban va loi moi ket ban"
+    },
+    {
+      "name": "Blocks",
+      "description": "Block va unblock nguoi dung"
+    },
+    {
+      "name": "Conversations",
+      "description": "Tin nhan truc tiep giua ban be"
+    },
+    {
+      "name": "Feed",
+      "description": "Feed hoat dong cua ban be"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Gui OTP dang ky",
+        "operationId": "requestRegisterOtp",
+        "security": [],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/auth/register/verify-otp": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Xac thuc OTP va tao tai khoan",
+        "operationId": "verifyRegisterOtp",
+        "security": [],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Created"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/auth/register/resend-otp": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Gui lai OTP dang ky",
+        "operationId": "resendRegisterOtp",
+        "security": [],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Dang nhap",
+        "operationId": "login",
+        "security": [],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/refresh-token": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Lam moi access token",
+        "operationId": "refreshToken",
+        "security": [
+          {
+            "refreshTokenCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Dang xuat phien hien tai",
+        "operationId": "logout",
+        "security": [
+          {
+            "refreshTokenCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/auth/logout-all": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Dang xuat tat ca thiet bi",
+        "operationId": "logoutAll",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/change-password": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Doi mat khau",
+        "operationId": "changePassword",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Gui OTP quen mat khau",
+        "operationId": "forgotPassword",
+        "security": [],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/auth/forgot-password/resend": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Gui lai OTP quen mat khau",
+        "operationId": "resendForgotPasswordOtp",
+        "security": [],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Dat lai mat khau",
+        "operationId": "resetPassword",
+        "security": [],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/auth/google": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Bat dau dang nhap Google",
+        "operationId": "googleLogin",
+        "security": [],
+        "responses": {
+          "302": {
+            "description": "Chuyen huong den Google OAuth"
+          }
+        }
+      }
+    },
+    "/auth/google-callback": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Google OAuth callback",
+        "operationId": "googleCallback",
+        "security": [],
+        "responses": {
+          "302": {
+            "description": "Chuyen huong sau khi xac thuc"
+          }
+        }
+      }
+    },
+    "/users/me": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Lay ho so hien tai",
+        "operationId": "getMe",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Cap nhat ho so hien tai",
+        "operationId": "updateMe",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "minProperties": 1,
+                "properties": {
+                  "displayName": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "defaultQuizSize": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  }
+                }
+              },
+              "example": {
+                "displayName": "Updated User",
+                "defaultQuizSize": 20
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "description": "Chi cap nhat displayName va defaultQuizSize. avatarUrl chi doi qua POST/DELETE /users/me/avatar; username doi qua PUT /users/me/username."
+      }
+    },
+    "/users/me/avatar": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Upload avatar len Cloudinary",
+        "description": "Chap nhan mot file JPEG, PNG, WebP hoac GIF toi da 5 MB. Upload lai se ghi de avatar cu cua user.",
+        "operationId": "uploadMyAvatar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "avatar"
+                ],
+                "properties": {
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "File JPEG, PNG, WebP hoac GIF; toi da 5 MB"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "413": {
+            "$ref": "#/components/responses/ContentTooLarge"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Xoa avatar khoi Cloudinary",
+        "description": "Xoa asset avatar cua user va dat avatarUrl ve null.",
+        "operationId": "deleteMyAvatar",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/users/username-available": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Kiem tra username con trong",
+        "description": "Tra ve username da normalize va co dung duoc hay khong. Username cua chinh minh duoc coi la con trong.",
+        "operationId": "checkUsernameAvailable",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 30,
+              "pattern": "^[a-z0-9](?:[a-z0-9._]{1,28})[a-z0-9]$",
+              "description": "Chu thuong, so, dau . va _; bat dau va ket thuc bang chu hoac so. Khong chua .. hoac __ va khong thuoc danh sach reserved."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/users/me/username": {
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Dat hoac doi username",
+        "description": "Chi doi duoc mot lan moi 30 ngay. Gui lai dung username hien tai khong tinh la doi. Tra 409 khi username da co nguoi dung hoac chua het cooldown.",
+        "operationId": "updateMyUsername",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "username"
+                ],
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 30,
+                    "pattern": "^[a-z0-9](?:[a-z0-9._]{1,28})[a-z0-9]$",
+                    "description": "Chu thuong, so, dau . va _; bat dau va ket thuc bang chu hoac so. Khong chua .. hoac __ va khong thuoc danh sach reserved."
+                  }
+                }
+              },
+              "example": {
+                "username": "nguyenvanphuoc"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/users/me/privacy": {
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Cap nhat quyen rieng tu",
+        "description": "Gui it nhat mot truong. activityVisibility dieu khien ai thay activity feed; friendRequestPolicy dieu khien ai gui duoc loi moi ket ban.",
+        "operationId": "updateMyPrivacy",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "minProperties": 1,
+                "properties": {
+                  "activityVisibility": {
+                    "type": "string",
+                    "enum": [
+                      "friends",
+                      "private"
+                    ],
+                    "default": "friends"
+                  },
+                  "friendRequestPolicy": {
+                    "type": "string",
+                    "enum": [
+                      "everyone",
+                      "nobody"
+                    ],
+                    "default": "everyone"
+                  }
+                }
+              },
+              "example": {
+                "activityVisibility": "friends",
+                "friendRequestPolicy": "everyone"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/folders": {
+      "get": {
+        "tags": [
+          "Folders"
+        ],
+        "summary": "Liet ke thu muc",
+        "operationId": "listFolders",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Folders"
+        ],
+        "summary": "Tao thu muc",
+        "operationId": "createFolder",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Created"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/folders/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Folders"
+        ],
+        "summary": "Lay chi tiet thu muc",
+        "operationId": "getFolderById",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Folders"
+        ],
+        "summary": "Cap nhat thu muc",
+        "operationId": "updateFolder",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Folders"
+        ],
+        "summary": "Xoa thu muc",
+        "operationId": "deleteFolder",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks": {
+      "get": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Liet ke bo the cua toi",
+        "operationId": "listDecks",
+        "parameters": [
+          {
+            "name": "folderId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Loc theo thu muc"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Tao bo the",
+        "operationId": "createDeck",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Created"
+          }
+        }
+      }
+    },
+    "/decks/public": {
+      "get": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Tim kiem bo the cong khai",
+        "operationId": "listPublicDecks",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "description": "Tu khoa tim kiem"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "popular"
+              ],
+              "default": "newest"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/public/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Lay chi tiet bo the cong khai kem tac gia va danh sach the",
+        "operationId": "getPublicDeckById",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/decks/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Lay chi tiet bo the",
+        "operationId": "getDeckById",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Cap nhat bo the",
+        "operationId": "updateDeck",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Xoa bo the",
+        "operationId": "deleteDeck",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{id}/copy": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Sao chep bo the",
+        "operationId": "copyDeck",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/cards": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Flashcards"
+        ],
+        "summary": "Liet ke the hoc",
+        "operationId": "listFlashcards",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Flashcards"
+        ],
+        "summary": "Tao the hoc",
+        "operationId": "createFlashcard",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Created"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/cards/reorder": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "put": {
+        "tags": [
+          "Flashcards"
+        ],
+        "summary": "Sap xep lai the hoc",
+        "operationId": "reorderFlashcards",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/cards/import/preview": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Flashcards"
+        ],
+        "summary": "Xem truoc du lieu import",
+        "operationId": "previewFlashcardImport",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/cards/import": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Flashcards"
+        ],
+        "summary": "Import the tu CSV hoac TSV",
+        "operationId": "importFlashcards",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/cards/{cardId}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        },
+        {
+          "$ref": "#/components/parameters/CardId"
+        }
+      ],
+      "put": {
+        "tags": [
+          "Flashcards"
+        ],
+        "summary": "Cap nhat the hoc",
+        "operationId": "updateFlashcard",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Flashcards"
+        ],
+        "summary": "Xoa the hoc",
+        "operationId": "deleteFlashcard",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/quiz": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Quiz"
+        ],
+        "summary": "Tao quiz",
+        "operationId": "generateQuiz",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/quiz/submit": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Quiz"
+        ],
+        "summary": "Nop ket qua quiz",
+        "operationId": "submitQuiz",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/learn": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Learn"
+        ],
+        "summary": "Lay vong hoc hien tai",
+        "operationId": "getLearnRound",
+        "parameters": [
+          {
+            "name": "includeFlashcard",
+            "in": "query",
+            "description": "Bat hoac tat cau hoi lat the cho the moi.",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/learn/answer": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Learn"
+        ],
+        "summary": "Tra loi trong vong hoc",
+        "operationId": "answerLearnRound",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/learn/session": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Learn"
+        ],
+        "summary": "Lay phien hoc hien tai",
+        "operationId": "getCurrentLearnSession",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Learn"
+        ],
+        "summary": "Bat dau phien hoc",
+        "operationId": "startLearnSession",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "master",
+                      "cram"
+                    ]
+                  },
+                  "config": {
+                    "type": "object",
+                    "properties": {
+                      "types": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "multiple_choice",
+                            "true_false",
+                            "written",
+                            "flashcard"
+                          ]
+                        }
+                      },
+                      "answerSide": {
+                        "type": "string",
+                        "enum": [
+                          "front",
+                          "back"
+                        ]
+                      },
+                      "writtenGradeMode": {
+                        "type": "string",
+                        "enum": [
+                          "strict",
+                          "moderate",
+                          "loose"
+                        ]
+                      },
+                      "retypeWrongAnswers": {
+                        "type": "boolean",
+                        "default": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/learn/session/answer": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Learn"
+        ],
+        "summary": "Tra loi trong phien hoc",
+        "operationId": "answerLearnSession",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/learn/session/override": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Learn"
+        ],
+        "summary": "Ghi de phien hoc hien tai",
+        "operationId": "overrideLearnSession",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/learn/session/retype": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Learn"
+        ],
+        "summary": "Go lai dap an dung sau khi tra loi sai",
+        "operationId": "retypeLearnSessionAnswer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "flashcardId",
+                  "typedAnswer"
+                ],
+                "properties": {
+                  "flashcardId": {
+                    "type": "string"
+                  },
+                  "typedAnswer": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/learn/session/reset": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Learn"
+        ],
+        "summary": "Dat lai phien hoc",
+        "operationId": "resetLearnSession",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "restart": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "resetProgress": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Xoa CardProgress cua user trong deck; du lieu nay dung chung voi Study va Quiz."
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "master",
+                      "cram"
+                    ]
+                  },
+                  "config": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/study": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Study"
+        ],
+        "summary": "Bat dau phien on tap",
+        "operationId": "startStudySession",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/decks/{deckId}/study/cards/{cardId}/review": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DeckId"
+        },
+        {
+          "$ref": "#/components/parameters/CardId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Study"
+        ],
+        "summary": "Ghi nhan ket qua on tap",
+        "operationId": "reviewStudyCard",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/dashboard": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Lay tong quan hoc tap ca nhan",
+        "description": "Tra so lieu Dashboard va chuoi ngay hoc theo timezone Asia/Ho_Chi_Minh.",
+        "operationId": "getDashboardOverview",
+        "responses": {
+          "200": {
+            "description": "Lay Dashboard thanh cong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/study-rooms": {
+      "get": {
+        "tags": [
+          "Study Rooms"
+        ],
+        "summary": "Liet ke phong hoc",
+        "operationId": "listStudyRooms",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Study Rooms"
+        ],
+        "summary": "Tao phong hoc",
+        "operationId": "createStudyRoom",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Created"
+          },
+          "429": {
+            "description": "Tao phong qua nhanh"
+          }
+        }
+      }
+    },
+    "/study-rooms/join": {
+      "post": {
+        "tags": [
+          "Study Rooms"
+        ],
+        "summary": "Tham gia phong bang ma",
+        "operationId": "joinStudyRoom",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "429": {
+            "description": "Thu ma phong qua nhanh"
+          }
+        }
+      }
+    },
+    "/study-rooms/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Study Rooms"
+        ],
+        "summary": "Lay chi tiet phong hoc",
+        "operationId": "getStudyRoomById",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/study-rooms/{id}/messages": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Study Rooms"
+        ],
+        "summary": "Lay lich su tin nhan",
+        "operationId": "listStudyRoomMessages",
+        "parameters": [
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Cursor thoi gian"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/study-rooms/{id}/leaderboard": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Study Rooms"
+        ],
+        "summary": "Lay bang xep hang",
+        "operationId": "getStudyRoomLeaderboard",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/study-rooms/{id}/media-token": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Study Rooms"
+        ],
+        "summary": "Tao LiveKit media token",
+        "description": "Can ket noi Socket.IO namespace /study-rooms va room:join thanh cong truoc khi goi. Header x-device-id phai trung voi deviceId cua Socket.IO session.",
+        "operationId": "createStudyRoomMediaToken",
+        "parameters": [
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/study-rooms/{id}/close": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Study Rooms"
+        ],
+        "summary": "Dong phong hoc",
+        "description": "Chi host duoc dong. Phong duoc luu lich su voi status closed; goi lai sau khi dong tra ve phong da dong.",
+        "operationId": "closeStudyRoom",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/friends/requests": {
+      "get": {
+        "tags": [
+          "Friends"
+        ],
+        "summary": "Lay danh sach loi moi ket ban da nhan",
+        "description": "Tra ve danh sach loi moi PENDING ma nguoi dung la addressee, phan trang theo requestedAt giam dan.",
+        "operationId": "listPendingRequests",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Friends"
+        ],
+        "summary": "Gui loi moi ket ban",
+        "description": "Neu doi phuong da gui loi moi cho minh truoc do thi hai ben tu dong thanh ban va autoAccepted = true. Loi moi bi tu choi truoc do chi gui lai duoc sau 24 gio.",
+        "operationId": "sendFriendRequest",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{24}$",
+                    "description": "ObjectId cua nguoi nhan loi moi"
+                  }
+                }
+              },
+              "example": {
+                "userId": "64b000000000000000000001"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Da gui loi moi, hoac hai ben tu dong thanh ban",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "friendship": {
+                              "$ref": "#/components/schemas/Friendship"
+                            },
+                            "autoAccepted": {
+                              "type": "boolean",
+                              "description": "true khi loi moi cheo lam hai ben thanh ban ngay"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/friends": {
+      "get": {
+        "tags": [
+          "Friends"
+        ],
+        "summary": "Lay danh sach ban be",
+        "description": "Tra ve danh sach ban be da ket ban, phan trang theo respondedAt giam dan.",
+        "operationId": "listFriends",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/friends/presence": {
+      "get": {
+        "tags": [
+          "Friends"
+        ],
+        "summary": "Lay trang thai hien dien cua ban be",
+        "description": "Tra ve map { userId: status } cho tat ca ban be hien tai. Status la online | idle | offline.",
+        "operationId": "getFriendsPresence",
+        "responses": {
+          "200": {
+            "description": "Presence map",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string",
+                            "enum": [
+                              "online",
+                              "idle",
+                              "offline"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/friends/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "description": "Id cua friendship (ACCEPTED)"
+        }
+      ],
+      "delete": {
+        "tags": [
+          "Friends"
+        ],
+        "summary": "Huy ket ban",
+        "description": "Xoa quan he ban be. Nguoi dung phai la mot trong hai ben cua friendship.",
+        "operationId": "unfriend",
+        "responses": {
+          "204": {
+            "description": "Da huy ket ban"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/friends/requests/{id}/accept": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "description": "Id cua friendship dang o trang thai pending"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Friends"
+        ],
+        "summary": "Chap nhan loi moi ket ban",
+        "description": "Chi nguoi nhan loi moi moi accept duoc. Tra 404 khi loi moi khong ton tai hoac nguoi goi khong phai nguoi nhan; tra 409 khi loi moi khong con o trang thai pending.",
+        "operationId": "acceptFriendRequest",
+        "responses": {
+          "200": {
+            "description": "Da chap nhan loi moi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Friendship"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/friends/requests/{id}/decline": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "description": "Id cua friendship dang o trang thai pending"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Friends"
+        ],
+        "summary": "Tu choi loi moi ket ban",
+        "description": "Chi nguoi nhan loi moi moi tu choi duoc. Sau khi tu choi, nguoi gui phai cho 24 gio truoc khi gui lai.",
+        "operationId": "declineFriendRequest",
+        "responses": {
+          "200": {
+            "description": "Da tu choi loi moi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Friendship"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/friends/requests/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "description": "Id cua friendship dang o trang thai pending"
+        }
+      ],
+      "delete": {
+        "tags": [
+          "Friends"
+        ],
+        "summary": "Huy loi moi ket ban da gui",
+        "description": "Chi nguoi gui loi moi moi huy duoc. Xoa ban ghi friendship khoi DB.",
+        "operationId": "cancelFriendRequest",
+        "responses": {
+          "204": {
+            "description": "Da huy loi moi"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/blocks": {
+      "get": {
+        "tags": [
+          "Blocks"
+        ],
+        "summary": "Lay danh sach nguoi da block",
+        "operationId": "listBlocked",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Blocks"
+        ],
+        "summary": "Block nguoi dung",
+        "operationId": "blockUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{24}$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/blocks/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "description": "Id cua ban ghi UserBlock"
+        }
+      ],
+      "delete": {
+        "tags": [
+          "Blocks"
+        ],
+        "summary": "Unblock nguoi dung",
+        "operationId": "unblockUser",
+        "responses": {
+          "204": {
+            "description": "Da unblock"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/conversations": {
+      "get": {
+        "tags": [
+          "Conversations"
+        ],
+        "summary": "Lay danh sach cuoc tro chuyen",
+        "operationId": "listConversations",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/conversations/messages": {
+      "post": {
+        "tags": [
+          "Conversations"
+        ],
+        "summary": "Gui tin nhan",
+        "description": "Gui DM den mot ban be. Dung clientMessageId de dedup: neu trung se tra ve message cu voi deduped=true.",
+        "operationId": "sendMessage",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "recipientId",
+                  "clientMessageId",
+                  "body"
+                ],
+                "properties": {
+                  "recipientId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{24}$"
+                  },
+                  "clientMessageId": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "body": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/conversations/{id}/messages": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "description": "Id cua conversation"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Conversations"
+        ],
+        "summary": "Lay lich su tin nhan (cursor pagination)",
+        "operationId": "listMessages",
+        "parameters": [
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "Lay tin truoc messageId nay"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/conversations/{id}/read": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "Conversations"
+        ],
+        "summary": "Danh dau da doc",
+        "operationId": "markRead",
+        "responses": {
+          "204": {
+            "description": "Da cap nhat trang thai doc"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/feed": {
+      "get": {
+        "tags": [
+          "Feed"
+        ],
+        "summary": "Lay feed hoat dong cua ban be",
+        "description": "Tra ve hoat dong gan nhat cua ban be voi visibility=friends, loai tru nguoi da block.",
+        "operationId": "getFeed",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "refreshTokenCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "refreshToken"
+      }
+    },
+    "parameters": {
+      "Id": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "DeckId": {
+        "name": "deckId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "CardId": {
+        "name": "cardId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Page": {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "default": 20
+        }
+      }
+    },
+    "requestBodies": {
+      "JsonBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "example": {}
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "example": 200
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "nullable": true
+          }
+        },
+        "additionalProperties": true
+      },
+      "StudyStreak": {
+        "type": "object",
+        "properties": {
+          "currentDays": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 6
+          },
+          "longestDays": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 18
+          },
+          "lastStudyDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "example": "2026-07-29"
+          },
+          "timezone": {
+            "type": "string",
+            "enum": [
+              "Asia/Ho_Chi_Minh"
+            ]
+          }
+        },
+        "required": [
+          "currentDays",
+          "longestDays",
+          "lastStudyDate",
+          "timezone"
+        ]
+      },
+      "QuizHistoryItem": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "66b5f80d96d27d726b945001"
+          },
+          "deckId": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "_id": {
+                "type": "string",
+                "example": "66b5f80d96d27d726b945002"
+              },
+              "title": {
+                "type": "string",
+                "example": "English vocabulary"
+              }
+            },
+            "required": [
+              "_id",
+              "title"
+            ]
+          },
+          "totalQuestions": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 10
+          },
+          "correctCount": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 8
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "example": 80
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Thoi luong lam quiz tinh bang giay.",
+            "example": 125
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Thoi diem nop va hoan thanh quiz.",
+            "example": "2026-08-07T06:10:00.000Z"
+          }
+        },
+        "required": [
+          "_id",
+          "deckId",
+          "totalQuestions",
+          "correctCount",
+          "score",
+          "durationSeconds",
+          "completedAt"
+        ]
+      },
+      "DashboardResponse": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "Lay tong quan hoc tap thanh cong."
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "stats": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "studyStreak": {
+                "$ref": "#/components/schemas/StudyStreak"
+              },
+              "progressByStatus": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer"
+                }
+              },
+              "recentDecks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "recentAttempts": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/QuizHistoryItem"
+                }
+              }
+            },
+            "required": [
+              "stats",
+              "studyStreak",
+              "progressByStatus",
+              "recentDecks",
+              "recentAttempts"
+            ]
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "data"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "example": 400
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "additionalProperties": true
+      },
+      "Friendship": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "userA": {
+            "type": "string",
+            "description": "Id nho hon trong cap, dam bao moi cap chi co mot ban ghi"
+          },
+          "userB": {
+            "type": "string",
+            "description": "Id lon hon trong cap"
+          },
+          "requesterId": {
+            "type": "string"
+          },
+          "addresseeId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "declined"
+            ]
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "respondedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "responses": {
+      "Success": {
+        "description": "Thanh cong",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiResponse"
+            }
+          }
+        }
+      },
+      "Created": {
+        "description": "Tao moi thanh cong",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiResponse"
+            }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Du lieu khong hop le",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Chua xac thuc hoac token khong hop le",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ContentTooLarge": {
+        "description": "File vuot qua gioi han 5 MB",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "Cloudinary chua duoc cau hinh hoac tam thoi khong san sang",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Khong tim thay tai nguyen",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Xung dot du lieu",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Vuot gioi han tan suat",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Khong co quyen thuc hien",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  }
+}
