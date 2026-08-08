@@ -20,7 +20,9 @@ const emailWorker = new Worker(
     const { email, displayName } = job.data
 
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: envConfig.email.host,
+      port: envConfig.email.port,
+      secure: envConfig.email.secure,
       auth: {
         user: envConfig.email.user,
         pass: envConfig.email.pass
