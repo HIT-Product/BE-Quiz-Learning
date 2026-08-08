@@ -272,7 +272,11 @@ const closeRoom = async (nsp, roomId, requesterId) => {
       { roomId, leftAt: null },
       { $set: { leftAt: closedAt, joinExpiresAt: null } }
     )
-    await roomMediaService.deleteRoom(roomId)
+    try {
+      await roomMediaService.deleteRoom(roomId)
+    } catch (error) {
+      logger.warn(`LiveKit room cleanup failed during close: room=${roomId} error=${error.message}`)
+    }
 
     const leases = await roomSessionService.listPresenceEntries(roomId)
     const closedRoom = await studyRoomModel.findByIdAndUpdate(
