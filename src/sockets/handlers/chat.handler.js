@@ -1,6 +1,6 @@
 import Joi from 'joi'
 
-import { redisClient } from '../../configs/index.js'
+import { redisClient } from '../../configs/redis.config.js'
 import { roomMessageModel, studyRoomModel } from '../../models/index.js'
 import { ROOM_REDIS_KEY, ROOM_LIMITS } from '../../constants/index.js'
 import { safeHandler, socketError } from '../utils/socketHandler.js'

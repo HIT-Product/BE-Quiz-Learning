@@ -1,6 +1,6 @@
 import { Queue } from 'bullmq'
 
-import { createRedisClient } from '../configs/index.js'
+import { createRedisClient } from '../configs/redis.config.js'
 import { QUEUE_NAME } from '../constants/index.js'
 
 const roomMaintenanceQueue = new Queue(QUEUE_NAME.ROOM_MAINTENANCE, {

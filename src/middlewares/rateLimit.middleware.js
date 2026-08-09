@@ -1,6 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 
-import { redisClient } from '../configs/index.js'
+import { redisClient } from '../configs/redis.config.js'
 import { response } from '../utils/index.js'
 
 const rateLimitMiddleware =

@@ -53,6 +53,10 @@
       "description": "Tong quan hoc tap ca nhan va study streak"
     },
     {
+      "name": "Admin Analytics",
+      "description": "Thong ke tong quan chi danh cho tai khoan admin"
+    },
+    {
       "name": "Friends",
       "description": "Ket ban va loi moi ket ban"
     },
@@ -1374,6 +1378,42 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/admin/analytics": {
+      "get": {
+        "tags": [
+          "Admin Analytics"
+        ],
+        "summary": "Lay thong ke quan tri",
+        "description": "Tra KPI, bieu do theo ngay va top deck. Tai khoan phai co role admin trong database.",
+        "operationId": "getAdminAnalyticsOverview",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "enum": [7, 30, 90],
+              "default": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           }
         }
       }

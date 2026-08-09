@@ -175,7 +175,7 @@ docker compose -f compose.prod.yaml up -d
 docker compose -f compose.prod.yaml ps
 ```
 
-Không commit hoặc chia sẻ file `.env` thật. Xem hướng dẫn chi tiết tại [docs/docker.md](./docs/docker.md).
+Không commit hoặc chia sẻ file `.env` thật.
 
 ## Chạy production bằng PM2
 
@@ -462,6 +462,69 @@ Response trả thêm `studyStreak`:
 Một ngày học được ghi nhận sau khi review thẻ, trả lời trong learn session, nộp quiz hoặc phát sinh thời gian học hợp lệ trong phòng học. Nhiều hoạt động trong cùng ngày chỉ tính một ngày. Nếu ngày học gần nhất là hôm qua thì chuỗi hiện tại vẫn được giữ; nếu cũ hơn hôm qua thì `currentDays` bằng `0`.
 
 Thiết kế và contract đầy đủ xem tại [`docs/dashboard.md`](docs/dashboard.md). OpenAPI nằm trong [`swagger/swagger.json`](swagger/swagger.json).
+
+### Admin Analytics
+
+| Method | Endpoint | Xác thực | Chức năng |
+| --- | --- | --- | --- |
+| GET | `/admin/analytics?days=30` | Bearer token + role `admin` | KPI, biểu đồ hằng ngày và top deck |
+
+Admin không có endpoint đăng nhập riêng. Admin vẫn là một tài khoản người dùng bình thường,
+nhưng có thêm `role: "admin"` trong MongoDB.
+
+#### 1. Tạo và cấp quyền admin
+
+Đăng ký tài khoản bằng luồng OTP thông thường hoặc dùng một tài khoản đã tồn tại, sau đó nâng quyền bằng email:
+
+```bash
+npm run admin:promote -- admin@example.com
+```
+
+Trong Docker Compose:
+
+```bash
+docker compose -f compose.prod.yaml run --rm --no-deps api npm run admin:promote -- admin@example.com
+```
+
+Role được kiểm tra trực tiếp từ database trên mỗi request admin, nên không cần đăng xuất
+hoặc cấp lại access token sau khi nâng quyền.
+
+#### 2. Đăng nhập admin
+
+Gọi endpoint đăng nhập chung:
+
+```http
+POST /api/v1/auth/login
+Content-Type: application/json
+```
+
+```json
+{
+  "email": "admin@example.com",
+  "password": "mat-khau-cua-admin"
+}
+```
+
+Lấy access token tại `data.accessToken` trong response.
+
+#### 3. Gọi API thống kê admin
+
+Gửi access token bằng Bearer header:
+
+```http
+GET /api/v1/admin/analytics?days=30
+Authorization: Bearer <accessToken>
+```
+
+Ví dụ cURL:
+
+```bash
+curl "http://localhost:3000/api/v1/admin/analytics?days=30" \
+  -H "Authorization: Bearer <accessToken>"
+```
+
+`days` chỉ nhận `7`, `30` hoặc `90`. User thường gọi endpoint này sẽ nhận `403 Forbidden`;
+token thiếu hoặc hết hạn sẽ nhận `401 Unauthorized`.
 
 ### Friends
 

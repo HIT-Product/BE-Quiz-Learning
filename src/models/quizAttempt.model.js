@@ -68,4 +68,6 @@ const quizAttemptSchema = new mongoose.Schema(
   }
 )
 
+quizAttemptSchema.index({ submittedAt: -1 })
+
 export default model('QuizAttempt', quizAttemptSchema)

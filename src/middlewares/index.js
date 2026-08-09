@@ -4,6 +4,7 @@ import morganMiddleware from './morgan.middleware.js'
 import authMiddleware from './auth.middleware.js'
 import rateLimitMiddleware from './rateLimit.middleware.js'
 import uploadAvatarMiddleware from './upload.middleware.js'
+import adminMiddleware from './admin.middleware.js'
 
 export {
   errorMiddleware,
@@ -11,5 +12,6 @@ export {
   morganMiddleware,
   authMiddleware,
   rateLimitMiddleware,
-  uploadAvatarMiddleware
+  uploadAvatarMiddleware,
+  adminMiddleware
 }

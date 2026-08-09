@@ -45,5 +45,7 @@ const deckSchema = new mongoose.Schema(
 )
 
 deckSchema.index({ title: 'text', description: 'text' })
+deckSchema.index({ createdAt: -1 })
+deckSchema.index({ visibility: 1, copyCount: -1, cardCount: -1 })
 
 export default model('Deck', deckSchema)
