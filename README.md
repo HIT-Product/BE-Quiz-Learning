@@ -483,7 +483,7 @@ npm run admin:promote -- admin@example.com
 Trong Docker Compose:
 
 ```bash
-docker compose exec api npm run admin:promote -- admin@example.com
+docker compose -f compose.prod.yaml run --rm --no-deps api npm run admin:promote -- admin@example.com
 ```
 
 Role được kiểm tra trực tiếp từ database trên mỗi request admin, nên không cần đăng xuất
