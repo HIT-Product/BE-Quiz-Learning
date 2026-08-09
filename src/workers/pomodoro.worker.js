@@ -1,6 +1,6 @@
 import { Worker } from 'bullmq'
 
-import { createRedisClient, redisClient } from '../configs/index.js'
+import { createRedisClient, redisClient } from '../configs/redis.config.js'
 import { pomodoroSessionModel, studyRoomModel } from '../models/index.js'
 import { pomodoroQueue } from '../queues/index.js'
 import { roomRealtimeService } from '../sockets/services/index.js'

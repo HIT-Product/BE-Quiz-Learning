@@ -1,7 +1,7 @@
 import Joi from 'joi'
 
 import { pomodoroQueue } from '../../queues/index.js'
-import { redisClient } from '../../configs/index.js'
+import { redisClient } from '../../configs/redis.config.js'
 import { studyRoomModel, pomodoroSessionModel } from '../../models/index.js'
 import { roomRealtimeService, roomSessionService } from '../services/index.js'
 import { serializePomodoroState } from '../contracts/pomodoro.contract.js'

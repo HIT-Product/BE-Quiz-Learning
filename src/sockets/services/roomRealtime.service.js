@@ -1,5 +1,5 @@
 ﻿import roomSessionService from './roomSession.service.js'
-import { redisClient } from '../../configs/index.js'
+import { redisClient } from '../../configs/redis.config.js'
 import { randomUUID } from 'node:crypto'
 import { StatusCodes } from 'http-status-codes'
 import { pomodoroQueue } from '../../queues/index.js'

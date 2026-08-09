@@ -175,7 +175,28 @@ docker compose -f compose.prod.yaml up -d
 docker compose -f compose.prod.yaml ps
 ```
 
-Không commit hoặc chia sẻ file `.env` thật. Xem hướng dẫn chi tiết tại [docs/docker.md](./docs/docker.md).
+Không commit hoặc chia sẻ file `.env` thật. Xem hướng dẫn chi tiết tại [docs/deployment.md](./docs/deployment.md).
+
+### Deploy backend khi frontend chưa có
+
+Backend deploy thành hai process dùng chung source code và biến môi trường:
+
+- API/web service: `npm run prod`
+- Background worker: `npm run prod:worker`
+- MongoDB managed hoặc MongoDB trong `compose.prod.yaml`
+- Redis managed qua `REDIS_URL`, hoặc Redis trong `compose.prod.yaml`
+
+Health check của web service:
+
+- Liveness: `GET /health/live`
+- Readiness MongoDB + Redis: `GET /health/ready`
+
+Khi chưa có frontend, có thể gọi API bằng Swagger/Postman. Khi frontend sẵn sàng, cập nhật
+`CLIENT_URL` và `GOOGLE_CALLBACK_URL` rồi redeploy. Hiện tại chỉ chạy **1 API replica** vì Socket.IO
+Redis adapter chưa bật; worker cũng chạy 1 replica để tránh xử lý job trùng.
+
+Trong môi trường production, API sẽ từ chối khởi động nếu thiếu MongoDB, Redis, JWT,
+OTP pepper, Google OAuth hoặc SMTP. Các secret xác thực phải có ít nhất 32 ký tự.
 
 ## Chạy production bằng PM2
 
@@ -462,6 +483,28 @@ Response trả thêm `studyStreak`:
 Một ngày học được ghi nhận sau khi review thẻ, trả lời trong learn session, nộp quiz hoặc phát sinh thời gian học hợp lệ trong phòng học. Nhiều hoạt động trong cùng ngày chỉ tính một ngày. Nếu ngày học gần nhất là hôm qua thì chuỗi hiện tại vẫn được giữ; nếu cũ hơn hôm qua thì `currentDays` bằng `0`.
 
 Thiết kế và contract đầy đủ xem tại [`docs/dashboard.md`](docs/dashboard.md). OpenAPI nằm trong [`swagger/swagger.json`](swagger/swagger.json).
+
+### Admin Analytics
+
+| Method | Endpoint | Xác thực | Chức năng |
+| --- | --- | --- | --- |
+| GET | `/admin/analytics?days=30` | Bearer token + role `admin` | KPI, biểu đồ hằng ngày và top deck |
+
+`days` chỉ nhận `7`, `30` hoặc `90`. Tạo tài khoản qua luồng đăng ký bình thường,
+sau đó nâng quyền bằng email:
+
+```bash
+npm run admin:promote -- admin@example.com
+```
+
+Trong Docker Compose:
+
+```bash
+docker compose exec api npm run admin:promote -- admin@example.com
+```
+
+Role được kiểm tra trực tiếp từ database trên mỗi request admin, nên không cần đăng xuất
+hoặc cấp lại access token sau khi nâng quyền.
 
 ### Friends
 
