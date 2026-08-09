@@ -89,7 +89,7 @@ npm run admin:promote -- admin@example.com
 Trong Docker:
 
 ```bash
-docker compose exec api npm run admin:promote -- admin@example.com
+docker compose -f compose.prod.yaml run --rm --no-deps api npm run admin:promote -- admin@example.com
 ```
 
 6. Đăng nhập tài khoản đó và gọi `GET /api/v1/admin/analytics?days=30`.
