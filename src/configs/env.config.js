@@ -1,6 +1,7 @@
 import dotenv from 'dotenv'
 
 import { ENV_DEFAULTS, NUMBER_PARSE_RADIX } from '../constants/index.js'
+import { buildMongoUri } from './mongo-uri.config.js'
 dotenv.config()
 
 const validateProductionEnv = (source = process.env) => {
@@ -46,20 +47,6 @@ const validateProductionEnv = (source = process.env) => {
 }
 
 validateProductionEnv()
-
-const buildMongoUri = () => {
-  if (process.env.MONGO_URI) return process.env.MONGO_URI
-
-  const username = process.env.MONGO_USERNAME
-  const password = process.env.MONGO_PASSWORD
-  if (!username || !password) return ENV_DEFAULTS.MONGO_URI
-
-  const host = process.env.MONGO_HOST || 'mongo'
-  const port = parseInt(process.env.MONGO_PORT, NUMBER_PARSE_RADIX) || 27017
-  const database = process.env.MONGO_DATABASE || 'hitproduct'
-
-  return `mongodb://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}:${port}/${encodeURIComponent(database)}?authSource=admin`
-}
 
 const env = {
   server: {
@@ -112,7 +99,7 @@ const env = {
     apiSecret: process.env.LIVEKIT_API_SECRET
   },
   mongo: {
-    uri: buildMongoUri()
+    uri: buildMongoUri(process.env)
   }
 }
 

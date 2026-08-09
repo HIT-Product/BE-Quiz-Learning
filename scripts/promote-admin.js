@@ -1,8 +1,11 @@
+import dotenv from 'dotenv'
 import mongoose from 'mongoose'
 
-import envConfig from '../src/configs/env.config.js'
+import { buildMongoUri } from '../src/configs/mongo-uri.config.js'
 import { USER_ROLE } from '../src/constants/index.js'
 import userModel from '../src/models/user.model.js'
+
+dotenv.config()
 
 const email = process.argv[2]?.trim().toLowerCase()
 
@@ -12,7 +15,7 @@ if (!email || !email.includes('@')) {
 }
 
 try {
-  await mongoose.connect(envConfig.mongo.uri)
+  await mongoose.connect(buildMongoUri(process.env))
 
   const user = await userModel
     .findOneAndUpdate({ email }, { $set: { role: USER_ROLE.ADMIN } }, { new: true })
