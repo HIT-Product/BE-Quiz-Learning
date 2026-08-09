@@ -1,18 +1,12 @@
 import { Worker } from 'bullmq'
-import Redis from 'ioredis'
 import nodemailer from 'nodemailer'
 
 import { envConfig } from '../configs/index.js'
+import { createRedisClient } from '../configs/redis.config.js'
 import { AUTH_LIMITS, EMAIL_JOB_NAME, QUEUE_EVENT, QUEUE_NAME } from '../constants/index.js'
 import { logger } from '../utils/index.js'
 
-const connection = new Redis({
-  host: envConfig.redis.host,
-  port: envConfig.redis.port,
-  username: envConfig.redis.username,
-  password: envConfig.redis.password,
-  maxRetriesPerRequest: null
-})
+const connection = createRedisClient()
 
 const emailWorker = new Worker(
   QUEUE_NAME.EMAIL,

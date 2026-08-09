@@ -32,5 +32,6 @@ const studyActivitySchema = new mongoose.Schema(
 )
 
 studyActivitySchema.index({ userId: 1, dateKey: 1 }, { unique: true })
+studyActivitySchema.index({ dateKey: 1, userId: 1 })
 
 export default model('StudyActivity', studyActivitySchema)

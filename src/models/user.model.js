@@ -3,7 +3,8 @@ import mongoose, { model } from 'mongoose'
 import {
   ACTIVITY_VISIBILITY,
   FRIEND_REQUEST_POLICY,
-  USER_LIMITS
+  USER_LIMITS,
+  USER_ROLE
 } from '../constants/index.js'
 
 const userSchema = new mongoose.Schema(
@@ -54,6 +55,12 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: Object.values(FRIEND_REQUEST_POLICY),
       default: FRIEND_REQUEST_POLICY.EVERYONE
+    },
+    role: {
+      type: String,
+      enum: Object.values(USER_ROLE),
+      default: USER_ROLE.USER,
+      index: true
     }
   },
   {
@@ -66,5 +73,6 @@ userSchema.index(
   { unique: true, partialFilterExpression: { username: { $type: 'string' } } }
 )
 userSchema.index({ displayName: 'text' })
+userSchema.index({ createdAt: -1 })
 
 export default model('User', userSchema)

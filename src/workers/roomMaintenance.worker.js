@@ -1,6 +1,6 @@
 import { Worker } from 'bullmq'
 
-import { createRedisClient } from '../configs/index.js'
+import { createRedisClient } from '../configs/redis.config.js'
 import {
   QUEUE_EVENT,
   QUEUE_NAME,
