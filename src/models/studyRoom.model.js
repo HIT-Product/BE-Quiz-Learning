@@ -89,5 +89,6 @@ const studyRoomSchema = new mongoose.Schema(
 
 studyRoomSchema.index({ visibility: 1, status: 1, createdAt: -1 })
 studyRoomSchema.index({ status: 1, emptySince: 1 })
+studyRoomSchema.index({ createdAt: -1 })
 
 export default model('StudyRoom', studyRoomSchema)

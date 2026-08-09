@@ -10,4 +10,9 @@ const USER_LIMITS = {
 const USERNAME_PATTERN = /^[a-z0-9](?:[a-z0-9._]{1,28})[a-z0-9]$/
 const USERNAME_RESERVED = Object.freeze(['admin', 'support', 'hitproduct', 'me', 'system'])
 
-export { USER_LIMITS, USERNAME_PATTERN, USERNAME_RESERVED }
+const USER_ROLE = Object.freeze({
+  USER: 'user',
+  ADMIN: 'admin'
+})
+
+export { USER_LIMITS, USERNAME_PATTERN, USERNAME_RESERVED, USER_ROLE }
