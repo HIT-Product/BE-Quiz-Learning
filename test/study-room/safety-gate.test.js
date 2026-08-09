@@ -4,15 +4,14 @@ import test from 'node:test'
 
 const readSource = (relativePath) => readFile(new URL(`../../${relativePath}`, import.meta.url), 'utf8')
 
-test('server disables and drains the legacy close scheduler before listening', async () => {
+test('server disables the legacy close scheduler without discarding queued jobs', async () => {
   const source = await readSource('src/server.js')
   const removePosition = source.indexOf('removeJobScheduler')
-  const drainPosition = source.indexOf('drain(true)')
   const listenPosition = source.indexOf('httpServer.listen')
 
   assert.ok(removePosition >= 0)
-  assert.ok(drainPosition > removePosition)
-  assert.ok(listenPosition > drainPosition)
+  assert.ok(listenPosition > removePosition)
+  assert.doesNotMatch(source, /\.drain\(true\)/)
   assert.doesNotMatch(source, /upsertJobScheduler/)
   assert.doesNotMatch(source, /createRoomMaintenanceWorker/)
 })

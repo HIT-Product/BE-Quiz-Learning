@@ -1,4 +1,4 @@
-import { redisClient } from '../../configs/index.js'
+import { redisClient } from '../../configs/redis.config.js'
 import {
   ROOM_DEVICE_TTL_SECONDS,
   ROOM_REDIS_KEY,

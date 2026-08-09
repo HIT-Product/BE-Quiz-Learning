@@ -1,21 +1,52 @@
 import dotenv from 'dotenv'
 
 import { ENV_DEFAULTS, NUMBER_PARSE_RADIX } from '../constants/index.js'
+import { buildMongoUri } from './mongo-uri.config.js'
 dotenv.config()
 
-const buildMongoUri = () => {
-  if (process.env.MONGO_URI) return process.env.MONGO_URI
+const validateProductionEnv = (source = process.env) => {
+  if (source.NODE_ENV !== 'production') return
 
-  const username = process.env.MONGO_USERNAME
-  const password = process.env.MONGO_PASSWORD
-  if (!username || !password) return ENV_DEFAULTS.MONGO_URI
+  const required = [
+    'JWT_SECRET_LOGIN',
+    'JWT_SECRET_REFRESH',
+    'JWT_EXPIRESIN_LOGIN',
+    'JWT_EXPIRESIN_REFRESH',
+    'OTP_PEPPER',
+    'GOOGLE_CLIENT_ID',
+    'GOOGLE_CLIENT_SECRET',
+    'GOOGLE_CALLBACK_URL'
+  ]
+  const missing = required.filter((key) => !source[key]?.trim())
 
-  const host = process.env.MONGO_HOST || 'mongo'
-  const port = parseInt(process.env.MONGO_PORT, NUMBER_PARSE_RADIX) || 27017
-  const database = process.env.MONGO_DATABASE || 'hitproduct'
+  if (!source.MONGO_URI?.trim() && (!source.MONGO_USERNAME?.trim() || !source.MONGO_PASSWORD?.trim())) {
+    missing.push('MONGO_URI or MONGO_USERNAME + MONGO_PASSWORD')
+  }
 
-  return `mongodb://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}:${port}/${encodeURIComponent(database)}?authSource=admin`
+  if (!source.REDIS_URL?.trim() && !source.REDIS_HOST?.trim()) {
+    missing.push('REDIS_URL or REDIS_HOST')
+  }
+
+  if (!source.EMAIL_SMTP_USER?.trim() && !source.EMAIL_USER?.trim()) {
+    missing.push('EMAIL_SMTP_USER or EMAIL_USER')
+  }
+
+  if (!source.EMAIL_SMTP_PASS?.trim() && !source.EMAIL_PASS?.trim()) {
+    missing.push('EMAIL_SMTP_PASS or EMAIL_PASS')
+  }
+
+  if (missing.length > 0) {
+    throw new Error(`Missing production environment variables: ${missing.join(', ')}`)
+  }
+
+  for (const key of ['JWT_SECRET_LOGIN', 'JWT_SECRET_REFRESH', 'OTP_PEPPER']) {
+    if (source[key].length < 32) {
+      throw new Error(`${key} must contain at least 32 characters in production.`)
+    }
+  }
 }
+
+validateProductionEnv()
 
 const env = {
   server: {
@@ -46,6 +77,7 @@ const env = {
     secure: process.env.EMAIL_SMTP_SECURE !== 'false'
   },
   redis: {
+    url: process.env.REDIS_URL,
     host: process.env.REDIS_HOST,
     port: parseInt(process.env.REDIS_PORT, NUMBER_PARSE_RADIX) || ENV_DEFAULTS.REDIS_PORT,
     username: process.env.REDIS_USERNAME,
@@ -67,8 +99,9 @@ const env = {
     apiSecret: process.env.LIVEKIT_API_SECRET
   },
   mongo: {
-    uri: buildMongoUri()
+    uri: buildMongoUri(process.env)
   }
 }
 
+export { validateProductionEnv }
 export default env

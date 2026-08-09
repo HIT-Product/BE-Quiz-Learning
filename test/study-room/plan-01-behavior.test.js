@@ -3,7 +3,7 @@ import { after, test } from 'node:test'
 import { StatusCodes } from 'http-status-codes'
 import mongoose from 'mongoose'
 
-import { redisClient } from '../../src/configs/index.js'
+import { redisClient } from '../../src/configs/redis.config.js'
 import { ROOM_ROLE, ROOM_VISIBILITY } from '../../src/constants/index.js'
 import { roomParticipantModel, studyRoomModel } from '../../src/models/index.js'
 import studyRoomService from '../../src/services/client/studyRoom.service.js'

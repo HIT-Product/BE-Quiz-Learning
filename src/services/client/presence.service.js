@@ -1,4 +1,4 @@
-import { redisClient } from '../../configs/index.js'
+import { redisClient } from '../../configs/redis.config.js'
 import { PRESENCE_STATUS, SOCIAL_LIMITS, SOCIAL_REDIS_KEY } from '../../constants/index.js'
 import { logger } from '../../utils/index.js'
 import { parseAggregate } from '../../utils/presence.js'
