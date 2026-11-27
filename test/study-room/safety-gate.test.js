@@ -97,6 +97,13 @@ test('Pomodoro custom job ids avoid BullMQ reserved colons', async () => {
   assert.doesNotMatch(worker, /jobId[^\n]*pomo:/)
 })
 
+test('changing a microphone lock keeps the room screen sharing policy', async () => {
+  const source = await readSource('src/sockets/services/roomRealtime.service.js')
+  const micLock = source.match(/const setMicLock =[\s\S]*?(?=const kick)/)
+  assert.ok(micLock)
+  assert.match(micLock[0], /allowScreenShare: room\.settings\.screenShareAllowed !== false/)
+})
+
 test('leaderboard includes active study marks and exposes an authenticated refresh event', async () => {
   const [service, handler] = await Promise.all([
     readSource('src/sockets/services/roomRealtime.service.js'),

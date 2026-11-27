@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import test, { after, before } from 'node:test'
+import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
 
@@ -10,8 +11,10 @@ import {
   flashcardModel,
   learnSessionModel,
   quizAttemptModel,
+  roomParticipantModel,
   sessionModel,
   studyActivityModel,
+  studyRoomModel,
   userModel
 } from '../../src/models/index.js'
 
@@ -97,11 +100,9 @@ before(async () => {
     { deckId: duplicateAnswerDeck._id, front: 'same one', back: 'giong nhau', sortOrder: 0 },
     { deckId: duplicateAnswerDeck._id, front: 'same two', back: 'giong nhau', sortOrder: 1 }
   ])
-  token = jwt.sign(
-    { _id: user._id, email: user.email, sessionId: session._id.toString() },
-    envConfig.jwt.secretLogin,
-    { expiresIn: envConfig.jwt.expiresInLogin }
-  )
+  token = jwt.sign({ _id: user._id, email: user.email, sessionId: session._id.toString() }, envConfig.jwt.secretLogin, {
+    expiresIn: envConfig.jwt.expiresInLogin
+  })
   otherToken = jwt.sign(
     { _id: otherUser._id, email: otherUser.email, sessionId: otherSession._id.toString() },
     envConfig.jwt.secretLogin,
@@ -129,6 +130,146 @@ after(async () => {
   ])
   await userModel.deleteMany({ _id: { $in: [user._id, otherUser._id] } })
   await mongoose.disconnect()
+})
+
+test('public deck search honors sort and keeps private matches out', { skip: !enabled }, async () => {
+  const keyword = `catalogsmoke${Date.now()}`
+  const [popular, newest, privateDeck] = await deckModel.create([
+    {
+      ownerId: user._id,
+      title: `${keyword} older`,
+      visibility: 'public',
+      copyCount: 10,
+      createdAt: new Date('2025-01-01T00:00:00Z')
+    },
+    {
+      ownerId: user._id,
+      title: `${keyword} newer`,
+      visibility: 'public',
+      copyCount: 1,
+      createdAt: new Date('2025-02-01T00:00:00Z')
+    },
+    { ownerId: user._id, title: `${keyword} private`, visibility: 'private', copyCount: 20 }
+  ])
+
+  try {
+    const firstPopular = await api(`/decks/public?q=${keyword}&sort=popular&page=1&limit=1`)
+    const firstNewest = await api(`/decks/public?q=${keyword}&sort=newest&page=1&limit=1`)
+    const nextNewest = await api(`/decks/public?q=${keyword}&sort=newest&page=2&limit=1`)
+
+    for (const { response, json } of [firstPopular, firstNewest, nextNewest]) {
+      assert.equal(response.status, 200)
+      assert.equal(json.total, 2)
+      assert.equal(json.data.length, 1)
+    }
+    assert.equal(firstPopular.json.data[0]._id, popular.id)
+    assert.equal(firstNewest.json.data[0]._id, newest.id)
+    assert.equal(nextNewest.json.data[0]._id, popular.id)
+  } finally {
+    await deckModel.deleteMany({ _id: { $in: [popular._id, newest._id, privateDeck._id] } })
+  }
+})
+
+test('CSV preview rejects empty and oversized imports before confirmation', { skip: !enabled }, async () => {
+  const path = `/decks/${deck.id}/cards/import`
+  const options = { delimiter: ',', hasHeader: true }
+  const columnMapping = { front: 0, back: 1, distractors: [] }
+  const post = (path, payload) => api(path, { method: 'POST', body: JSON.stringify(payload) })
+  const csv = (count) => ['Câu hỏi,Đáp án', ...Array.from({ length: count }, (_, i) => `Thẻ ${i},Đáp án`)].join('\n')
+
+  const headerOnly = await post(`${path}/preview`, { rawText: csv(0), options })
+  assert.equal(headerOnly.response.status, 422)
+  assert.match(headerOnly.json.message, /Chưa có dòng dữ liệu/)
+
+  const rowLimit = await post(`${path}/preview`, { rawText: csv(1001), options })
+  assert.equal(rowLimit.response.status, 422)
+  assert.match(rowLimit.json.message, /1000 dòng/)
+
+  const atCapacity = await post(path, { rawText: csv(496), columnMapping, options, dryRun: true })
+  assert.equal(atCapacity.response.status, 200)
+  assert.equal(atCapacity.json.data.preview.length, 496)
+
+  for (const dryRun of [true, false]) {
+    const tooMany = await post(path, { rawText: csv(497), columnMapping, options, dryRun })
+    assert.equal(tooMany.response.status, 422)
+    assert.match(tooMany.json.message, /500 thẻ/)
+  }
+  assert.equal(await flashcardModel.countDocuments({ deckId: deck._id }), 4)
+})
+
+test('room summary uses persisted results and respects membership and room settings', { skip: !enabled }, async () => {
+  const room = await studyRoomModel.create({
+    hostId: user._id,
+    title: 'Study room summary integration',
+    roomCode: (Date.now() % 36 ** 6).toString(36).toUpperCase().padStart(6, '0')
+  })
+
+  try {
+    await roomParticipantModel.create({
+      roomId: room._id,
+      userId: user._id,
+      role: 'host',
+      studySeconds: 150,
+      leftAt: new Date()
+    })
+    const path = `/study-rooms/${room.id}/summary`
+    assert.equal((await api(path)).response.status, 409)
+
+    const closedAt = new Date()
+    await studyRoomModel.updateOne({ _id: room._id }, { $set: { status: 'closed', closedAt } })
+    assert.equal((await api(path, { headers: { Authorization: `Bearer ${otherToken}` } })).response.status, 404)
+
+    await roomParticipantModel.create({
+      roomId: room._id,
+      userId: otherUser._id,
+      studySeconds: 210,
+      leftAt: closedAt
+    })
+    const result = await api(path)
+    assert.equal(result.response.status, 200)
+    assert.deepEqual(result.json.data.room, {
+      _id: room.id,
+      title: room.title,
+      createdAt: room.createdAt.toISOString(),
+      closedAt: closedAt.toISOString()
+    })
+    assert.deepEqual(result.json.data.stats, { participantCount: 2, totalSeconds: 360, personalSeconds: 150 })
+    assert.deepEqual(
+      result.json.data.leaderboard.map((entry) => entry.userId.displayName),
+      [otherUser.displayName, user.displayName]
+    )
+
+    await studyRoomModel.updateOne({ _id: room._id }, { $set: { 'settings.leaderboardEnabled': false } })
+    const hiddenRanking = await api(path)
+    assert.equal(hiddenRanking.response.status, 200)
+    assert.equal(hiddenRanking.json.data.leaderboard, null)
+    assert.deepEqual(hiddenRanking.json.data.stats, result.json.data.stats)
+  } finally {
+    await roomParticipantModel.deleteMany({ roomId: room._id })
+    await studyRoomModel.deleteOne({ _id: room._id })
+  }
+})
+
+test('admin login rejects regular accounts before issuing a session', { skip: !enabled }, async () => {
+  const password = 'integration-login-only'
+  const account = await userModel.create({
+    email: `admin-scope-${Date.now()}@example.com`,
+    displayName: 'Admin scope smoke test',
+    passwordHash: await bcrypt.hash(password, 4)
+  })
+
+  try {
+    const { response } = await api('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: account.email, password, scope: 'admin' })
+    })
+    assert.equal(response.status, 403)
+    assert.equal(response.headers.has('set-cookie'), false)
+    assert.equal(await sessionModel.countDocuments({ userId: account._id }), 0)
+  } finally {
+    await sessionModel.deleteMany({ userId: account._id })
+    await userModel.deleteOne({ _id: account._id })
+  }
 })
 
 test('learning APIs work together end to end', { skip: !enabled }, async () => {
@@ -194,6 +335,12 @@ test('learning APIs work together end to end', { skip: !enabled }, async () => {
   assert.equal(rememberedReview.json.data.status, 'remembered')
   assert.equal(rememberedReview.json.data.reviewCount, 2)
 
+  const rememberedStudy = await api('/decks/' + deckId + '/study?filter=remembered')
+  assert.equal(rememberedStudy.response.status, 200)
+  assert.equal(rememberedStudy.json.data.cards.length, 1)
+  assert.equal(rememberedStudy.json.data.cards[0].status, 'remembered')
+  assert.equal((await api('/decks/' + deckId + '/study?filter=unknown')).response.status, 400)
+
   const quiz = await api(`/decks/${deckId}/quiz`, {
     method: 'POST',
     body: JSON.stringify({ types: ['multiple_choice', 'true_false', 'written'], limit: 4 })
@@ -201,17 +348,40 @@ test('learning APIs work together end to end', { skip: !enabled }, async () => {
   assert.equal(quiz.response.status, 200)
   assert.equal(quiz.json.data.questions.length, 4)
   assert.ok(quiz.json.data.questions.every((question) => !('correctAnswer' in question)))
+  const resultPath = `/decks/${deckId}/quiz/attempts/${quiz.json.data.attemptId}`
+  assert.equal((await api(resultPath)).response.status, 404)
 
-  const quizSubmit = await api(`/decks/${deckId}/quiz/submit`, {
+  const quizPayload = {
+    attemptId: quiz.json.data.attemptId,
+    answers: quiz.json.data.questions.map((question) => ({ questionId: question.questionId, selectedAnswer: '' }))
+  }
+  const quizSubmit = await api('/decks/' + deckId + '/quiz/submit', {
     method: 'POST',
-    body: JSON.stringify({
-      attemptId: quiz.json.data.attemptId,
-      answers: quiz.json.data.questions.map((question) => ({ questionId: question.questionId, selectedAnswer: '' }))
-    })
+    body: JSON.stringify(quizPayload)
   })
   assert.equal(quizSubmit.response.status, 201)
   assert.equal(quizSubmit.json.data.totalQuestions, 4)
+  assert.deepEqual(
+    quizSubmit.json.data.answers.map((answer) => answer.type),
+    quiz.json.data.questions.map((question) => question.type)
+  )
   assert.ok(quizSubmit.json.data.score >= 0 && quizSubmit.json.data.score <= 100)
+  const savedResult = await api(resultPath)
+  assert.equal(savedResult.response.status, 200)
+  assert.equal(savedResult.json.data.submittedAt, quizSubmit.json.data.submittedAt)
+  assert.equal(savedResult.json.data.score, quizSubmit.json.data.score)
+  assert.deepEqual(savedResult.json.data.answers, quizSubmit.json.data.answers)
+  assert.equal((await api(resultPath, { headers: { Authorization: `Bearer ${otherToken}` } })).response.status, 404)
+
+  const progressFilter = { userId: user._id, flashcardId: { $in: cards.map((card) => card._id) } }
+  const progressAfterSubmit = await cardProgressModel.find(progressFilter).sort({ _id: 1 }).lean()
+  const retriedQuiz = await api('/decks/' + deckId + '/quiz/submit', {
+    method: 'POST',
+    body: JSON.stringify(quizPayload)
+  })
+  assert.equal(retriedQuiz.response.status, 201)
+  assert.equal(retriedQuiz.json.data.submittedAt, quizSubmit.json.data.submittedAt)
+  assert.deepEqual(await cardProgressModel.find(progressFilter).sort({ _id: 1 }).lean(), progressAfterSubmit)
 
   const duplicateSubmit = await api(`/decks/${deckId}/quiz/submit`, {
     method: 'POST',
@@ -294,7 +464,10 @@ test('learning APIs work together end to end', { skip: !enabled }, async () => {
   assert.equal(finalReset.response.status, 200)
   assert.equal(finalReset.json.data.reset, true)
   assert.equal(finalReset.json.data.progressReset, true)
-  assert.equal(await cardProgressModel.countDocuments({ userId: user._id, flashcardId: { $in: cards.map((card) => card._id) } }), 0)
+  assert.equal(
+    await cardProgressModel.countDocuments({ userId: user._id, flashcardId: { $in: cards.map((card) => card._id) } }),
+    0
+  )
 
   const orderedConfig = {
     types: ['multiple_choice', 'true_false', 'written'],
@@ -373,6 +546,10 @@ test('learning APIs work together end to end', { skip: !enabled }, async () => {
   assert.equal(currentDuringRetype.response.status, 200)
   assert.equal(currentDuringRetype.json.data.current, null)
   assert.equal(currentDuringRetype.json.data.retype.required, true)
+  assert.deepEqual(currentDuringRetype.json.data.retype.question, {
+    type: 'written',
+    questionText: retypeSession.json.data.current.questionText
+  })
 
   const rejectedRetype = await api(`/decks/${deckId}/learn/session/retype`, {
     method: 'POST',

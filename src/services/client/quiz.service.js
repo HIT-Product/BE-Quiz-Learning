@@ -58,6 +58,7 @@ const generate = async (deckId, userId, config) => {
     submittedAt: null,
     answers: questions.map((q) => ({
       flashcardId: q.flashcardId,
+      type: q.type,
       questionText: q.questionText,
       correctAnswer: q.correctAnswer,
       selectedAnswer: null,
@@ -76,53 +77,97 @@ const generate = async (deckId, userId, config) => {
   return { attemptId: attempt._id, startedAt: attempt.startedAt, questions: safeQuestions }
 }
 
-// Chấm và nộp quiz.
-const submit = async (deckId, userId, payload) => {
-  await getAccessibleDeck(deckId, userId)
-
-  const { attemptId, answers } = payload
-
-  const attempt = await quizAttemptModel.findOne({ _id: attemptId, userId, deckId, submittedAt: null })
-  if (!attempt) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy lượt làm bài hoặc bài đã được nộp.')
-  }
-
-  const selectedMap = new Map(answers.map((a) => [a.questionId, a.selectedAnswer]))
-
-  let correctCount = 0
-  for (const ans of attempt.answers) {
-    const selected = selectedMap.get(ans._id.toString()) ?? null
-    ans.selectedAnswer = selected
-    ans.isCorrect = matchAnswer(selected || '', ans.correctAnswer)
-    if (ans.isCorrect) correctCount++
-  }
-
-  attempt.correctCount = correctCount
-  attempt.score = Math.round((correctCount / attempt.totalQuestions) * QUESTION_LIMITS.SCORE_PERCENT_MAX)
-  attempt.submittedAt = new Date()
-  await attempt.save()
-
-  const progressOps = attempt.answers.map((ans) => ({
+// Đánh dấu mỗi lượt đã áp dụng ngay trên document tiến độ để có thể thử lại an toàn.
+const saveQuizProgress = async (attempt, userId) => {
+  const alreadyApplied = { $in: [attempt._id, { $ifNull: ['$appliedQuizAttempts', []] }] }
+  const isLatestReview = { $lte: [{ $ifNull: ['$lastReviewedAt', attempt.gradingAt] }, attempt.gradingAt] }
+  const progressOps = attempt.answers.map((answer) => ({
     updateOne: {
-      filter: { userId, flashcardId: ans.flashcardId },
-      update: {
-        $set: {
-          status: ans.isCorrect ? LEARNING_STATUS.REMEMBERED : LEARNING_STATUS.LEARNING,
-          lastReviewedAt: new Date()
-        },
-        $inc: { reviewCount: 1 },
-        $setOnInsert: { userId, flashcardId: ans.flashcardId }
-      },
+      filter: { userId, flashcardId: answer.flashcardId },
+      update: [
+        {
+          $set: {
+            status: {
+              $cond: [
+                { $and: [{ $not: [alreadyApplied] }, isLatestReview] },
+                answer.isCorrect ? LEARNING_STATUS.REMEMBERED : LEARNING_STATUS.LEARNING,
+                '$status'
+              ]
+            },
+            lastReviewedAt: { $cond: [isLatestReview, attempt.gradingAt, '$lastReviewedAt'] },
+            reviewCount: { $add: [{ $ifNull: ['$reviewCount', 0] }, { $cond: [alreadyApplied, 0, 1] }] },
+            appliedQuizAttempts: { $setUnion: [{ $ifNull: ['$appliedQuizAttempts', []] }, [attempt._id]] }
+          }
+        }
+      ],
       upsert: true
     }
   }))
-  if (progressOps.length > 0) {
+  if (!progressOps.length) return
+  try {
+    await cardProgressModel.bulkWrite(progressOps)
+  } catch (error) {
+    if (error.code !== 11000) throw error
     await cardProgressModel.bulkWrite(progressOps)
   }
+}
 
-  await recordStudyActivity(userId, STUDY_ACTIVITY_SOURCE.QUIZ, attempt.submittedAt)
+// Chấm và nộp quiz.
+const submit = async (deckId, userId, { attemptId, answers }) => {
+  await getAccessibleDeck(deckId, userId)
 
+  const attemptFilter = { _id: attemptId, userId, deckId }
+  const selectedMap = new Map(answers.map((answer) => [answer.questionId, answer.selectedAnswer]))
+  let attempt = await quizAttemptModel.findOne(attemptFilter).select('+gradingAt')
+  if (!attempt) throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy lượt làm bài.')
+
+  if (!attempt.submittedAt && !attempt.gradingAt) {
+    const gradedAnswers = attempt.answers.map((answer) => {
+      const selectedAnswer = selectedMap.get(answer._id.toString()) ?? null
+      return {
+        ...answer.toObject(),
+        selectedAnswer,
+        isCorrect: matchAnswer(selectedAnswer || '', answer.correctAnswer)
+      }
+    })
+    const correctCount = gradedAnswers.filter((answer) => answer.isCorrect).length
+    const score = Math.round((correctCount / attempt.totalQuestions) * QUESTION_LIMITS.SCORE_PERCENT_MAX)
+    const graded = await quizAttemptModel
+      .findOneAndUpdate(
+        { ...attemptFilter, submittedAt: null, gradingAt: null },
+        { $set: { answers: gradedAnswers, correctCount, score, gradingAt: new Date() } },
+        { returnDocument: 'after' }
+      )
+      .select('+gradingAt')
+    attempt = graded ?? (await quizAttemptModel.findOne(attemptFilter).select('+gradingAt'))
+  }
+
+  if (
+    !attempt ||
+    !attempt.answers.every((answer) => answer.selectedAnswer === (selectedMap.get(answer._id.toString()) ?? null))
+  ) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy lượt làm bài hoặc bài đã được nộp.')
+  }
+  if (!attempt.submittedAt) {
+    await saveQuizProgress(attempt, userId)
+    await recordStudyActivity(userId, STUDY_ACTIVITY_SOURCE.QUIZ, attempt.gradingAt)
+    const submitted = await quizAttemptModel.findOneAndUpdate(
+      { ...attemptFilter, submittedAt: null },
+      { $set: { submittedAt: attempt.gradingAt } },
+      { returnDocument: 'after' }
+    )
+    if (submitted) return submitted
+  }
+  return quizAttemptModel.findOne(attemptFilter)
+}
+
+const getResult = async (deckId, userId, attemptId) => {
+  const attempt = await quizAttemptModel
+    .findOne({ _id: attemptId, userId, deckId, submittedAt: { $ne: null } })
+    .select('totalQuestions correctCount score startedAt submittedAt answers')
+    .lean()
+  if (!attempt) throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy kết quả bài kiểm tra.')
   return attempt
 }
 
-export default { generate, submit }
+export default { generate, submit, getResult }

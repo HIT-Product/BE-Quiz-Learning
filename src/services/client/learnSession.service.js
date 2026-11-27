@@ -367,7 +367,8 @@ const presentRetype = (pendingRetype) =>
     ? {
         required: true,
         flashcardId: pendingRetype.flashcardId,
-        correctAnswer: pendingRetype.correctAnswer
+        correctAnswer: pendingRetype.correctAnswer,
+        question: pendingRetype.question
       }
     : null
 
@@ -382,12 +383,30 @@ const present = (session, cmap) => ({
   retype: presentRetype(session.pendingRetype)
 })
 
+const resumeSession = async (session, cmap) => {
+  if (!session.current && !session.pendingRetype && session.step === 0) {
+    activateCards(session)
+    issueNext(session, cmap)
+    if (!session.current) throw new ApiError(StatusCodes.BAD_REQUEST, 'Bo the chua co the hoc nao.')
+
+    // Chỉ một request được phục hồi phiên cũ chưa lưu câu đầu.
+    const initialized = await learnSessionModel.findOneAndUpdate(
+      { _id: session._id, status: LEARN_SESSION_STATUS.IN_PROGRESS, step: 0, current: null, pendingRetype: null },
+      { $set: { cards: session.cards, current: session.current } },
+      { returnDocument: 'after' }
+    )
+    session = initialized ?? (await learnSessionModel.findById(session._id))
+    if (!session) throw new ApiError(StatusCodes.NOT_FOUND, 'Khong co phien hoc dang chay.')
+  }
+  return present(session, cmap)
+}
+
 const startOrResume = async (deckId, userId, { mode = LEARN_SESSION_MODE.MASTER, config } = {}) => {
   await getAccessibleDeck(deckId, userId)
 
   const existing = await learnSessionModel.findOne({ userId, deckId, status: LEARN_SESSION_STATUS.IN_PROGRESS })
   if (existing) {
-    return present(existing, await cardsMap(deckId))
+    return resumeSession(existing, await cardsMap(deckId))
   }
 
   const cards = await loadCards(deckId)
@@ -416,30 +435,29 @@ const startOrResume = async (deckId, userId, { mode = LEARN_SESSION_MODE.MASTER,
   const cmap = { all: cards, byId: new Map(cards.map((c) => [c._id.toString(), c])) }
 
   // Xử lý hai request tạo session cùng lúc.
-  let session
+  const session = new learnSessionModel({
+    userId,
+    deckId,
+    mode,
+    config: cfg,
+    cards: pool.map((c) => ({ flashcardId: c._id })),
+    step: 0,
+    stats: { totalCorrect: 0, totalWrong: 0 },
+    status: LEARN_SESSION_STATUS.IN_PROGRESS,
+    startedAt: new Date()
+  })
+  activateCards(session)
+  issueNext(session, cmap)
+
   try {
-    session = await learnSessionModel.create({
-      userId,
-      deckId,
-      mode,
-      config: cfg,
-      cards: pool.map((c) => ({ flashcardId: c._id })),
-      step: 0,
-      stats: { totalCorrect: 0, totalWrong: 0 },
-      status: LEARN_SESSION_STATUS.IN_PROGRESS,
-      startedAt: new Date()
-    })
+    await session.save()
   } catch (e) {
     if (e.code === 11000) {
       const again = await learnSessionModel.findOne({ userId, deckId, status: LEARN_SESSION_STATUS.IN_PROGRESS })
-      if (again) return present(again, cmap)
+      if (again) return resumeSession(again, cmap)
     }
     throw e
   }
-
-  activateCards(session)
-  issueNext(session, cmap)
-  await session.save()
 
   return present(session, cmap)
 }
@@ -448,7 +466,7 @@ const getCurrent = async (deckId, userId) => {
   await getAccessibleDeck(deckId, userId)
   const session = await learnSessionModel.findOne({ userId, deckId, status: LEARN_SESSION_STATUS.IN_PROGRESS })
   if (!session) throw new ApiError(StatusCodes.NOT_FOUND, 'Khong co phien hoc dang chay.')
-  return present(session, await cardsMap(deckId))
+  return resumeSession(session, await cardsMap(deckId))
 }
 
 const answer = async (deckId, userId, payload) => {
@@ -499,7 +517,8 @@ const answer = async (deckId, userId, payload) => {
   } else if (retypeRequired) {
     session.pendingRetype = {
       flashcardId: cs.flashcardId.toString(),
-      correctAnswer: result.correctAnswer
+      correctAnswer: result.correctAnswer,
+      question: { type: questionType, questionText: session.current.questionText }
     }
     session.current = null
   } else {

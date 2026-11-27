@@ -1,6 +1,13 @@
 import mongoose from 'mongoose'
 
-import { deckModel, folderModel, cardProgressModel, quizAttemptModel, studyActivityModel } from '../../models/index.js'
+import {
+  deckModel,
+  flashcardModel,
+  folderModel,
+  cardProgressModel,
+  quizAttemptModel,
+  studyActivityModel
+} from '../../models/index.js'
 import { calculateStudyStreak, toDateKey } from './studyActivity.service.js'
 
 // Tổng hợp dữ liệu Dashboard của một người dùng.
@@ -9,18 +16,26 @@ const getOverview = async (userId) => {
   const ownerId = new mongoose.Types.ObjectId(userId)
 
   // Các truy vấn không phụ thuộc nhau nên được chạy song song.
-  const [totalDecks, totalFolders, cardAgg, progressAgg, quizAgg, activityDays, recentDecks, recentAttempts] =
-    await Promise.all([
+  const [totalDecks, totalFolders, progressAgg, quizAgg, activityDays, recentDecks, recentAttempts] = await Promise.all(
+    [
       deckModel.countDocuments({ ownerId }),
       folderModel.countDocuments({ ownerId }),
 
-      // Tổng số thẻ trong các deck do người dùng sở hữu.
-      deckModel.aggregate([{ $match: { ownerId } }, { $group: { _id: null, totalCards: { $sum: '$cardCount' } } }]),
-
-      // Số thẻ theo trạng thái học.
-      cardProgressModel.aggregate([
-        { $match: { userId: ownerId } },
-        { $group: { _id: '$status', count: { $sum: 1 } } }
+      // Tổng thẻ và tiến độ dùng cùng tập thẻ trong thư viện hiện tại.
+      deckModel.aggregate([
+        { $match: { ownerId } },
+        { $lookup: { from: flashcardModel.collection.name, localField: '_id', foreignField: 'deckId', as: 'cards' } },
+        { $unwind: '$cards' },
+        {
+          $lookup: {
+            from: cardProgressModel.collection.name,
+            localField: 'cards._id',
+            foreignField: 'flashcardId',
+            pipeline: [{ $match: { userId: ownerId } }, { $project: { _id: 0, status: 1 } }],
+            as: 'progress'
+          }
+        },
+        { $group: { _id: { $ifNull: [{ $first: '$progress.status' }, 'new'] }, count: { $sum: 1 } } }
       ]),
 
       // Điểm trung bình và số lượt quiz đã nộp.
@@ -41,10 +56,11 @@ const getOverview = async (userId) => {
         .sort({ submittedAt: -1 })
         .limit(5)
         .populate('deckId', 'title')
-    ])
+    ]
+  )
 
   // Aggregation trả mảng rỗng khi chưa có dữ liệu.
-  const totalCards = cardAgg[0]?.totalCards || 0
+  const totalCards = progressAgg.reduce((total, row) => total + row.count, 0)
 
   const progressByStatus = { new: 0, learning: 0, remembered: 0 }
   for (const row of progressAgg) {

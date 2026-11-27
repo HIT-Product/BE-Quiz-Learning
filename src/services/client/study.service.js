@@ -40,12 +40,14 @@ const startSession = async (deckId, userId, filter = 'all') => {
   const summary = { total: cards.length, new: 0, learning: 0, remembered: 0 }
   for (const c of withStatus) summary[c.status]++
 
-  let items = withStatus
-  if (filter === LEARNING_STATUS.NEW) {
-    items = withStatus.filter((i) => i.status === LEARNING_STATUS.NEW)
-  } else if (filter === LEARNING_STATUS.LEARNING) {
-    items = withStatus.filter((i) => i.status === LEARNING_STATUS.NEW || i.status === LEARNING_STATUS.LEARNING)
-  }
+  const items =
+    filter === 'all'
+      ? withStatus
+      : withStatus.filter((item) =>
+          filter === LEARNING_STATUS.LEARNING
+            ? item.status === LEARNING_STATUS.NEW || item.status === LEARNING_STATUS.LEARNING
+            : item.status === filter
+        )
 
   return { deckId, filter, summary, sessionSize: items.length, cards: items }
 }

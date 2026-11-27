@@ -209,11 +209,34 @@ const parseCsv = (rawText, options) => {
   if (result.errors?.some((e) => e.type === 'Delimiter')) {
     throw new ApiError(
       StatusCodes.UNPROCESSABLE_ENTITY,
-      'Không xác định được dấu phân cách. Hãy chọn delimiter cụ thể.'
+      'Không nhận diện được dấu phân tách. Hãy chọn dấu phân tách rồi thử lại.'
     )
   }
 
+  const parseError = result.errors?.[0]
+  if (parseError) {
+    const row = Number.isInteger(parseError.row) ? ' (dòng ' + (parseError.row + 1) + ')' : ''
+    throw new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, 'CSV sai cú pháp' + row + '.')
+  }
+
   return { rows: result.data, detectedDelimiter: result.meta?.delimiter || delimiter }
+}
+
+const getImportRows = (rows, hasHeader) => {
+  const dataRows = hasHeader ? rows.slice(1) : rows
+  if (dataRows.length === 0) {
+    throw new ApiError(
+      StatusCodes.UNPROCESSABLE_ENTITY,
+      'Chưa có dòng dữ liệu. Hãy thêm ít nhất một thẻ hoặc bỏ chọn dòng tiêu đề.'
+    )
+  }
+  if (dataRows.length > IMPORT_LIMITS.MAX_IMPORT_ROWS) {
+    throw new ApiError(
+      StatusCodes.UNPROCESSABLE_ENTITY,
+      `Chỉ có thể nhập tối đa ${IMPORT_LIMITS.MAX_IMPORT_ROWS} dòng mỗi lần.`
+    )
+  }
+  return dataRows
 }
 
 // Đọc header và dữ liệu mẫu.
@@ -226,16 +249,8 @@ const previewImport = async (deckId, ownerId, rawText, options) => {
     hasHeader: options?.hasHeader !== false
   }
   const { rows, detectedDelimiter } = parseCsv(rawText, opts)
-
-  let headers, dataRows
-  if (opts.hasHeader && rows.length > 0) {
-    headers = rows[0].map((h, i) => cleanCell(h) || `Cot ${i + 1}`)
-    dataRows = rows.slice(1)
-  } else {
-    const colCount = rows[0]?.length || 0
-    headers = Array.from({ length: colCount }, (_, i) => `Cot ${i + 1}`)
-    dataRows = rows
-  }
+  const dataRows = getImportRows(rows, opts.hasHeader)
+  const headers = rows[0].map((cell, index) => (opts.hasHeader && cleanCell(cell)) || `Cột ${index + 1}`)
 
   return {
     headers,
@@ -254,11 +269,7 @@ const importCards = async (deckId, ownerId, { rawText, columnMapping, options, d
 
   const deck = await assertOwnedDeck(deckId, ownerId)
   const { rows } = parseCsv(rawText, opts)
-
-  let dataRows = opts.hasHeader ? rows.slice(1) : rows
-  if (dataRows.length > IMPORT_LIMITS.MAX_IMPORT_ROWS) {
-    throw new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, `Tối đa ${IMPORT_LIMITS.MAX_IMPORT_ROWS} dòng mỗi lần import.`)
-  }
+  const dataRows = getImportRows(rows, opts.hasHeader)
 
   const distractorCols = columnMapping.distractors || []
   const cards = []
@@ -270,10 +281,13 @@ const importCards = async (deckId, ownerId, { rawText, columnMapping, options, d
     const front = cleanCell(row[columnMapping.front])
     const back = cleanCell(row[columnMapping.back])
 
-    if (!front) return skipped.push({ row: rowNum, reason: 'front trống' })
-    if (!back) return skipped.push({ row: rowNum, reason: 'back trống' })
+    if (!front) return skipped.push({ row: rowNum, reason: 'Thiếu nội dung mặt trước.' })
+    if (!back) return skipped.push({ row: rowNum, reason: 'Thiếu nội dung mặt sau.' })
     if (front.length > IMPORT_LIMITS.MAX_FIELD_LENGTH || back.length > IMPORT_LIMITS.MAX_FIELD_LENGTH) {
-      return skipped.push({ row: rowNum, reason: `vượt quá ${IMPORT_LIMITS.MAX_FIELD_LENGTH} ký tự` })
+      return skipped.push({
+        row: rowNum,
+        reason: `Mặt trước hoặc mặt sau vượt quá ${IMPORT_LIMITS.MAX_FIELD_LENGTH} ký tự.`
+      })
     }
 
     // Chuẩn hóa trước khi loại trùng.
@@ -300,10 +314,6 @@ const importCards = async (deckId, ownerId, { rawText, columnMapping, options, d
     cards.push({ front, stem: mc.stem, back: finalBack, distractors: finalDistractors, cardType })
   })
 
-  if (dryRun) {
-    return { imported: 0, skipped, preview: cards }
-  }
-
   if (cards.length === 0) {
     return { imported: 0, skipped, preview: [] }
   }
@@ -311,8 +321,12 @@ const importCards = async (deckId, ownerId, { rawText, columnMapping, options, d
   if ((deck.cardCount || 0) + cards.length > IMPORT_LIMITS.DECK_CARD_LIMIT) {
     throw new ApiError(
       StatusCodes.UNPROCESSABLE_ENTITY,
-      `Bo the vuot qua gioi han ${IMPORT_LIMITS.DECK_CARD_LIMIT} the (hien co ${deck.cardCount || 0}, them ${cards.length}).`
+      `Bộ thẻ chứa tối đa ${IMPORT_LIMITS.DECK_CARD_LIMIT} thẻ. Hiện có ${deck.cardCount || 0} thẻ và bạn đang thêm ${cards.length} thẻ.`
     )
+  }
+
+  if (dryRun) {
+    return { imported: 0, skipped, preview: cards }
   }
 
   const last = await flashcardModel.findOne({ deckId }).sort({ sortOrder: -1 }).select('sortOrder').lean()

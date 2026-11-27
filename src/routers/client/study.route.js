@@ -8,7 +8,7 @@ const studyRouter = Router({ mergeParams: true })
 
 studyRouter.use(authMiddleware)
 
-studyRouter.get('/', studyController.startSession)
+studyRouter.get('/', validateMiddleware(studyValidation.start), studyController.startSession)
 studyRouter.post('/cards/:cardId/review', validateMiddleware(studyValidation.review), studyController.reviewCard)
 
 export default studyRouter

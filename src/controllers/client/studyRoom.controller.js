@@ -11,7 +11,7 @@ const create = catchAsync(async (req, res) => {
 })
 
 const list = catchAsync(async (req, res) => {
-  const data = await studyRoomService.list(req.query)
+  const data = await studyRoomService.list(req.validatedQuery)
   res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Lấy danh sách phòng học thành công.', data))
 })
 
@@ -20,19 +20,29 @@ const joinByCode = catchAsync(async (req, res) => {
   res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Tham gia phòng học thành công.', room))
 })
 
+const cancelReservation = catchAsync(async (req, res) => {
+  await studyRoomService.cancelReservation(req.params.id, req.user._id, req.body.reservationExpiresAt)
+  res.status(StatusCodes.NO_CONTENT).end()
+})
+
 const getById = catchAsync(async (req, res) => {
   const room = await studyRoomService.getById(req.params.id, req.user._id)
   res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Lấy thông tin phòng học thành công.', room))
 })
 
 const listMessages = catchAsync(async (req, res) => {
-  const messages = await studyRoomService.listMessages(req.params.id, req.user._id, req.query)
+  const messages = await studyRoomService.listMessages(req.params.id, req.user._id, req.validatedQuery)
   res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Lấy tin nhắn phòng học thành công.', messages))
 })
 
 const leaderboard = catchAsync(async (req, res) => {
   const data = await studyRoomService.leaderboard(req.params.id, req.user._id)
   res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Lấy bảng xếp hạng thành công.', data))
+})
+
+const getSummary = catchAsync(async (req, res) => {
+  const data = await studyRoomService.getSummary(req.params.id, req.user._id)
+  res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Lấy tổng kết phòng học thành công.', data))
 })
 
 const mediaToken = catchAsync(async (req, res) => {
@@ -49,4 +59,15 @@ const close = catchAsync(async (req, res) => {
   res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Đóng phòng học thành công.', room))
 })
 
-export default { create, list, joinByCode, getById, listMessages, leaderboard, mediaToken, close }
+export default {
+  create,
+  list,
+  joinByCode,
+  cancelReservation,
+  getById,
+  listMessages,
+  leaderboard,
+  getSummary,
+  mediaToken,
+  close
+}

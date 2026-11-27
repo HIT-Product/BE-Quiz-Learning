@@ -126,6 +126,8 @@ const registerRoomHandlers = (nsp, socket) => {
           tookOver
         }
 
+        await studyRoomService.activateParticipant(roomId, userId)
+
         if (tookOver) {
           nsp.to(previous.socketId).emit('room:session-taken-over', {
             roomId: String(roomId),

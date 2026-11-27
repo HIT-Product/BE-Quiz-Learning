@@ -5,7 +5,8 @@ import { AUTH_LIMITS, AUTH_PATTERN, USER_LIMITS } from '../../constants/index.js
 const login = {
   body: Joi.object({
     email: Joi.string().email().required(),
-    password: Joi.string().required()
+    password: Joi.string().required(),
+    scope: Joi.string().valid('admin')
   })
 }
 

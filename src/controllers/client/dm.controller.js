@@ -1,7 +1,8 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { dmService } from '../../services/client/index.js'
-import { catchAsync, response } from '../../utils/index.js'
+import { emitDirectMessage } from '../../sockets/index.js'
+import { catchAsync, logger, response } from '../../utils/index.js'
 
 // [GET] /conversations
 const listConversations = catchAsync(async (req, res) => {
@@ -13,6 +14,11 @@ const listConversations = catchAsync(async (req, res) => {
 const sendMessage = catchAsync(async (req, res) => {
   const { recipientId, clientMessageId, body } = req.body
   const data = await dmService.sendMessage(req.user._id, recipientId, { body, clientMessageId })
+  if (!data.deduped) {
+    void emitDirectMessage(recipientId, data.message).catch((error) => {
+      logger.warn(`Direct message delivery failed: ${error.message}`)
+    })
+  }
   res.status(StatusCodes.CREATED).json(response(StatusCodes.CREATED, 'Gui tin nhan thanh cong.', data))
 })
 

@@ -77,7 +77,7 @@ const copy = async (sourceDeckId, userId) => {
 
   const sourceCards = await flashcardModel.find({ deckId: source._id }).sort({ sortOrder: 1 })
 
-  const newDeck = await deckModel.create({
+  const newDeck = new deckModel({
     ownerId: userId,
     title: source.title,
     description: source.description,
@@ -86,24 +86,32 @@ const copy = async (sourceDeckId, userId) => {
     cardCount: sourceCards.length
   })
 
-  if (sourceCards.length > 0) {
-    const clonedCards = sourceCards.map((card) => ({
-      deckId: newDeck._id,
-      front: card.front,
-      back: card.back,
-      sortOrder: card.sortOrder,
-      source: FLASHCARD_SOURCE.COPY
-    }))
-    await flashcardModel.insertMany(clonedCards)
+  try {
+    if (sourceCards.length > 0) {
+      const clonedCards = sourceCards.map((card) => ({
+        deckId: newDeck._id,
+        front: card.front,
+        back: card.back,
+        stem: card.stem,
+        cardType: card.cardType,
+        distractors: card.distractors,
+        sortOrder: card.sortOrder,
+        source: FLASHCARD_SOURCE.COPY
+      }))
+      await flashcardModel.insertMany(clonedCards)
+    }
+
+    await newDeck.save()
+    await deckCopyLogModel.create({ sourceDeckId: source._id, copiedDeckId: newDeck._id, copiedBy: userId })
+    await deckModel.updateOne({ _id: sourceDeckId }, { $inc: { copyCount: 1 } })
+  } catch (error) {
+    await Promise.allSettled([
+      flashcardModel.deleteMany({ deckId: newDeck._id }),
+      deckCopyLogModel.deleteOne({ copiedDeckId: newDeck._id }),
+      deckModel.deleteOne({ _id: newDeck._id, ownerId: userId })
+    ])
+    throw error
   }
-
-  await deckCopyLogModel.create({
-    sourceDeckId: source._id,
-    copiedDeckId: newDeck._id,
-    copiedBy: userId
-  })
-
-  await deckModel.updateOne({ _id: sourceDeckId }, { $inc: { copyCount: 1 } })
 
   return newDeck
 }
@@ -112,30 +120,21 @@ const listPublic = async ({ q, sort, page, limit } = {}) => {
   // Tự coerce + default vì middleware không ghi lại req.query, query params là string
   const pageNum = Math.max(1, Number(page) || 1)
   const limitNum = Math.min(50, Math.max(1, Number(limit) || 20))
-  const sortKey = sort === 'popular' ? 'popular' : 'newest'
   const keyword = (q || '').trim()
   const skip = (pageNum - 1) * limitNum
 
-  // Có từ khóa: dùng $text search, sort theo relevance score
+  const filter = { visibility: DECK_VISIBILITY.PUBLIC }
+  let order = { createdAt: -1, _id: -1 }
+  let projection
   if (keyword) {
-    const filter = { visibility: 'public', $text: { $search: keyword } }
-    const projection = { score: { $meta: 'textScore' } }
-    const [data, total] = await Promise.all([
-      deckModel
-        .find(filter, projection)
-        .sort({ score: { $meta: 'textScore' } })
-        .skip(skip)
-        .limit(limitNum),
-      deckModel.countDocuments(filter)
-    ])
-    return { data, total, page: pageNum, limit: limitNum }
+    filter.$text = { $search: keyword }
+    projection = { score: { $meta: 'textScore' } }
+    if (!sort) order = { score: { $meta: 'textScore' }, ...order }
   }
+  if (sort === 'popular') order = { copyCount: -1, ...order }
 
-  // Không có từ khóa: sort theo field
-  const sortField = sortKey === 'popular' ? { copyCount: -1 } : { createdAt: -1 }
-  const filter = { visibility: 'public' }
   const [data, total] = await Promise.all([
-    deckModel.find(filter).sort(sortField).skip(skip).limit(limitNum),
+    deckModel.find(filter, projection).sort(order).skip(skip).limit(limitNum),
     deckModel.countDocuments(filter)
   ])
   return { data, total, page: pageNum, limit: limitNum }

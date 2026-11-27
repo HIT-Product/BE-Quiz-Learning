@@ -39,4 +39,8 @@ const submit = {
   })
 }
 
-export default { generate, submit }
+const result = {
+  params: Joi.object({ deckId: objectId.required(), attemptId: objectId.required() })
+}
+
+export default { generate, submit, result }

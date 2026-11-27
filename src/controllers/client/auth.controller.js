@@ -6,9 +6,9 @@ import { authService } from '../../services/client/index.js'
 import { catchAsync, response, ApiError, refreshCookieOptions } from '../../utils/index.js'
 // [POST] /auth/login
 const login = catchAsync(async (req, res) => {
-  const { email, password } = req.body
+  const { email, password, scope } = req.body
 
-  const { accessToken, refreshToken } = await authService.login({ email, password })
+  const { accessToken, refreshToken } = await authService.login({ email, password, scope })
 
   res.cookie(COOKIE_NAME.REFRESH_TOKEN, refreshToken, refreshCookieOptions)
   return res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Đăng nhập thành công.', { accessToken }))
@@ -86,17 +86,13 @@ const resendForgotPasswordOtp = catchAsync(async (req, res) => {
 // [GET] /auth/google-callback
 const googleCallback = catchAsync(async (req, res) => {
   try {
-    const { accessToken, refreshToken } = await authService.googleLogin(req.user)
+    const { refreshToken } = await authService.googleLogin(req.user)
 
     res.cookie(COOKIE_NAME.REFRESH_TOKEN, refreshToken, refreshCookieOptions)
 
-    return res.redirect(
-      envConfig.server.clientUrl + '/auth/login?success=true&accessToken=' + encodeURIComponent(accessToken)
-    )
-  } catch (error) {
-    return res.redirect(
-      envConfig.server.clientUrl + '/auth/login?success=false&message=' + encodeURIComponent(error.message)
-    )
+    return res.redirect(envConfig.server.clientUrl + '/auth/login?success=true')
+  } catch {
+    return res.redirect(envConfig.server.clientUrl + '/auth/login?success=false')
   }
 })
 

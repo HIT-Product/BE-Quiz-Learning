@@ -1,4 +1,5 @@
 import mongoose, { model } from 'mongoose'
+import { QUIZ_QUESTION_TYPES } from '../constants/index.js'
 
 const quizAnswerSchema = new mongoose.Schema(
   {
@@ -10,6 +11,10 @@ const quizAnswerSchema = new mongoose.Schema(
     questionText: {
       type: String,
       required: true
+    },
+    type: {
+      type: String,
+      enum: QUIZ_QUESTION_TYPES
     },
     correctAnswer: {
       type: String,
@@ -56,6 +61,11 @@ const quizAttemptSchema = new mongoose.Schema(
     startedAt: {
       type: Date,
       required: true
+    },
+    gradingAt: {
+      type: Date,
+      default: null,
+      select: false
     },
     submittedAt: {
       type: Date,
