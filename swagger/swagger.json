@@ -148,7 +148,20 @@
         "operationId": "login",
         "security": [],
         "requestBody": {
-          "$ref": "#/components/requestBodies/JsonBody"
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "format": "password" },
+                  "scope": { "type": "string", "enum": ["admin"], "description": "Require an admin account before issuing a session." }
+                }
+              }
+            }
+          }
         },
         "responses": {
           "200": {
@@ -159,6 +172,9 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           }
         }
       }
@@ -326,7 +342,7 @@
         "security": [],
         "responses": {
           "302": {
-            "description": "Chuyen huong sau khi xac thuc"
+            "description": "Chuyen huong ve trang dang nhap. Neu thanh cong, refresh token duoc dat trong cookie HttpOnly."
           }
         }
       }
@@ -1040,6 +1056,22 @@
         }
       }
     },
+    "/decks/{deckId}/quiz/attempts/{attemptId}": {
+      "parameters": [
+        { "$ref": "#/components/parameters/DeckId" },
+        { "name": "attemptId", "in": "path", "required": true, "schema": { "type": "string" } }
+      ],
+      "get": {
+        "tags": ["Quiz"],
+        "summary": "Lấy kết quả Quiz đã nộp của người dùng hiện tại",
+        "operationId": "getQuizResult",
+        "responses": {
+          "200": { "$ref": "#/components/responses/Success" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/decks/{deckId}/learn": {
       "parameters": [
         {
@@ -1325,6 +1357,13 @@
         ],
         "summary": "Bat dau phien on tap",
         "operationId": "startStudySession",
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["all", "new", "learning", "remembered"], "default": "all" }
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/components/responses/Success"
@@ -1498,6 +1537,7 @@
         ],
         "summary": "Lay chi tiet phong hoc",
         "operationId": "getStudyRoomById",
+        "description": "Du lieu phong bao gom reservationExpiresAt cua nguoi goi khi dang giu cho.",
         "responses": {
           "200": {
             "$ref": "#/components/responses/Success"
@@ -1505,6 +1545,31 @@
           "404": {
             "$ref": "#/components/responses/NotFound"
           }
+        }
+      }
+    },
+    "/study-rooms/{id}/reservation/cancel": {
+      "parameters": [{ "$ref": "#/components/parameters/Id" }],
+      "patch": {
+        "tags": ["Study Rooms"],
+        "summary": "Huy luot giu cho o sanh",
+        "operationId": "cancelStudyRoomReservation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["reservationExpiresAt"],
+                "properties": { "reservationExpiresAt": { "type": "string", "format": "date-time" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "Luot giu cho tuong ung da duoc huy hoac khong con trong." },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     },
@@ -1564,6 +1629,33 @@
         "responses": {
           "200": {
             "$ref": "#/components/responses/Success"
+          }
+        }
+      }
+    },
+    "/study-rooms/{id}/summary": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": ["Study Rooms"],
+        "summary": "Lấy tổng kết phòng học đã đóng",
+        "description": "Chỉ thành viên không bị chặn mới xem được. Trả về thời gian cá nhân, tổng thời gian nhóm, số thành viên và tối đa năm người đứng đầu nếu bảng xếp hạng được bật.",
+        "operationId": "getStudyRoomSummary",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
           }
         }
       }

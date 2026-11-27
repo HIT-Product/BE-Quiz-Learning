@@ -15,4 +15,9 @@ const submit = catchAsync(async (req, res) => {
   res.status(StatusCodes.CREATED).json(response(StatusCodes.CREATED, 'Nộp bài thành công.', attempt))
 })
 
-export default { generate, submit }
+const getResult = catchAsync(async (req, res) => {
+  const attempt = await quizService.getResult(req.params.deckId, req.user._id, req.params.attemptId)
+  res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Lấy kết quả bài kiểm tra thành công.', attempt))
+})
+
+export default { generate, submit, getResult }

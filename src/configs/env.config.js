@@ -18,6 +18,7 @@ const validateProductionEnv = (source = process.env) => {
     'GOOGLE_CALLBACK_URL'
   ]
   const missing = required.filter((key) => !source[key]?.trim())
+  const emailDeliveryEnabled = source.EMAIL_DELIVERY_DISABLED !== 'true'
 
   if (!source.MONGO_URI?.trim() && (!source.MONGO_USERNAME?.trim() || !source.MONGO_PASSWORD?.trim())) {
     missing.push('MONGO_URI or MONGO_USERNAME + MONGO_PASSWORD')
@@ -27,11 +28,11 @@ const validateProductionEnv = (source = process.env) => {
     missing.push('REDIS_URL or REDIS_HOST')
   }
 
-  if (!source.EMAIL_SMTP_USER?.trim() && !source.EMAIL_USER?.trim()) {
+  if (emailDeliveryEnabled && !source.EMAIL_SMTP_USER?.trim() && !source.EMAIL_USER?.trim()) {
     missing.push('EMAIL_SMTP_USER or EMAIL_USER')
   }
 
-  if (!source.EMAIL_SMTP_PASS?.trim() && !source.EMAIL_PASS?.trim()) {
+  if (emailDeliveryEnabled && !source.EMAIL_SMTP_PASS?.trim() && !source.EMAIL_PASS?.trim()) {
     missing.push('EMAIL_SMTP_PASS or EMAIL_PASS')
   }
 
@@ -70,6 +71,7 @@ const env = {
     pepper: process.env.OTP_PEPPER
   },
   email: {
+    enabled: process.env.EMAIL_DELIVERY_DISABLED !== 'true',
     user: process.env.EMAIL_SMTP_USER || process.env.EMAIL_USER,
     pass: process.env.EMAIL_SMTP_PASS || process.env.EMAIL_PASS,
     host: process.env.EMAIL_SMTP_HOST || 'smtp.titan.email',

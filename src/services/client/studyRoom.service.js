@@ -26,18 +26,35 @@ const assertParticipant = async (roomId, userId) => {
   return participant
 }
 
+const activeParticipantFilter = (roomId, userId) => ({
+  roomId,
+  userId,
+  leftAt: null,
+  kickedAt: null,
+  bannedAt: null,
+  $or: [{ joinExpiresAt: null }, { joinExpiresAt: { $gt: new Date() } }]
+})
+
 const assertActiveParticipant = async (roomId, userId) => {
-  const participant = await roomParticipantModel.findOne({
-    roomId,
-    userId,
-    leftAt: null,
-    kickedAt: null,
-    bannedAt: null
-  })
+  const participant = await roomParticipantModel.findOne(activeParticipantFilter(roomId, userId))
   if (!participant) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Phong hoc khong ton tai hoac ban khong con trong phong.')
   }
   return participant
+}
+
+const activateParticipant = async (roomId, userId) => {
+  const result = await roomParticipantModel.updateOne(activeParticipantFilter(roomId, userId), {
+    $set: { joinExpiresAt: null }
+  })
+  if (!result.matchedCount) throw new ApiError(StatusCodes.NOT_FOUND, 'Lượt giữ chỗ đã hết hạn hoặc đã bị hủy.')
+}
+
+const cancelReservation = async (roomId, userId, reservationExpiresAt) => {
+  await roomParticipantModel.updateOne(
+    { roomId, userId, leftAt: null, joinExpiresAt: reservationExpiresAt },
+    { $set: { leftAt: new Date(), joinExpiresAt: null } }
+  )
 }
 
 // [POST] /study-rooms
@@ -123,8 +140,8 @@ const joinByCode = async (userId, roomCode) => {
 // [GET] /study-rooms/:id
 const getById = async (roomId, userId) => {
   const room = await findOpenRoom(roomId)
-  await assertParticipant(roomId, userId)
-  return room
+  const participant = await assertParticipant(roomId, userId)
+  return { ...room.toObject(), reservationExpiresAt: participant.joinExpiresAt }
 }
 
 // [GET] /study-rooms/:id/messages
@@ -153,6 +170,54 @@ const leaderboard = async (roomId, userId) => {
     .sort({ studySeconds: -1 })
     .limit(50)
     .lean()
+}
+
+const getSummary = async (roomId, userId) => {
+  const participant = await assertParticipant(roomId, userId)
+  const room = await studyRoomModel
+    .findById(roomId)
+    .select('title status createdAt closedAt settings.leaderboardEnabled')
+    .lean()
+  if (!room) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy phòng học.')
+  }
+  if (room.status !== ROOM_STATUS.CLOSED) {
+    throw new ApiError(StatusCodes.CONFLICT, 'Phòng học chưa kết thúc.')
+  }
+
+  const participants = { roomId: participant.roomId, bannedAt: null }
+  const showLeaderboard = room.settings?.leaderboardEnabled !== false
+  const [[stats], leaders] = await Promise.all([
+    roomParticipantModel.aggregate([
+      { $match: participants },
+      {
+        $group: {
+          _id: null,
+          participantCount: { $sum: 1 },
+          totalSeconds: { $sum: '$studySeconds' },
+          personalSeconds: {
+            $sum: { $cond: [{ $eq: ['$userId', participant.userId] }, '$studySeconds', 0] }
+          }
+        }
+      },
+      { $project: { _id: 0 } }
+    ]),
+    showLeaderboard
+      ? roomParticipantModel
+          .find(participants)
+          .select('userId studySeconds')
+          .populate('userId', 'displayName avatarUrl')
+          .sort({ studySeconds: -1, _id: 1 })
+          .limit(5)
+          .lean()
+      : null
+  ])
+
+  return {
+    room: { _id: room._id, title: room.title, createdAt: room.createdAt, closedAt: room.closedAt },
+    stats: stats ?? { participantCount: 0, totalSeconds: 0, personalSeconds: 0 },
+    leaderboard: leaders
+  }
 }
 
 // [POST] /study-rooms/:id/media-token
@@ -191,12 +256,12 @@ const reserveParticipant = async ({ roomId, userId, role = ROOM_ROLE.MEMBER }) =
     return existing
   }
   if (existing) {
-    existing.joinedAt = now
-    existing.joinExpiresAt = reservationExpiry()
-    existing.leftAt = null
-    existing.kickedAt = null
-    await existing.save()
-    return existing
+    const renewed = await roomParticipantModel.findOneAndUpdate(
+      { _id: existing._id, bannedAt: null, $or: [{ leftAt: { $ne: null } }, { joinExpiresAt: { $ne: null } }] },
+      { $set: { joinedAt: now, joinExpiresAt: reservationExpiry(), leftAt: null, kickedAt: null } },
+      { returnDocument: 'after' }
+    )
+    return renewed ?? (await assertActiveParticipant(roomId, userId))
   }
 
   return roomParticipantModel.create({
@@ -212,9 +277,12 @@ export default {
   create,
   list,
   joinByCode,
+  cancelReservation,
+  activateParticipant,
   getById,
   listMessages,
   leaderboard,
+  getSummary,
   mediaToken,
   assertParticipant,
   assertActiveParticipant,

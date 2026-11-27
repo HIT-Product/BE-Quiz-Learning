@@ -4,7 +4,7 @@ import crypto from 'node:crypto'
 import { StatusCodes } from 'http-status-codes'
 
 import { envConfig } from '../../configs/index.js'
-import { AUTH_LIMITS, EMAIL_JOB_NAME, GOOGLE_AUTH } from '../../constants/index.js'
+import { AUTH_LIMITS, EMAIL_JOB_NAME, GOOGLE_AUTH, USER_ROLE } from '../../constants/index.js'
 import { emailQueue } from '../../queues/index.js'
 import { ApiError, hashToken, jwtUtils, logger } from '../../utils/index.js'
 import { userModel, sessionModel, passwordResetModel, pendingRegistrationModel } from '../../models/index.js'
@@ -26,7 +26,7 @@ const issueTokens = async (user) => {
 }
 
 // Đăng nhập
-const login = async ({ email, password }) => {
+const login = async ({ email, password, scope }) => {
   const user = await userModel.findOne({ email })
   if (!user) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Email hoặc mật khẩu không đúng.')
@@ -35,6 +35,10 @@ const login = async ({ email, password }) => {
   const isMatch = await bcrypt.compare(password, user.passwordHash)
   if (!isMatch) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Email hoặc mật khẩu không đúng.')
+  }
+
+  if (scope === 'admin' && user.role !== USER_ROLE.ADMIN) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Tài khoản này không có quyền quản trị.')
   }
 
   return issueTokens(user)
@@ -53,14 +57,11 @@ const refreshToken = async (token) => {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Phiên đăng nhập không hợp lệ.')
   }
 
-  const session = await sessionModel.findOne({
+  const currentSession = {
     _id: payload.sessionId,
     userId: payload._id,
     tokenHash: hashToken(token),
     expiresAt: { $gt: new Date() }
-  })
-  if (!session) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Phiên đăng nhập không tồn tại.')
   }
 
   const user = await userModel.findById(payload._id)
@@ -68,15 +69,14 @@ const refreshToken = async (token) => {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Người dùng không tồn tại.')
   }
 
-  const accessToken = jwtUtils.generateAccessToken(user, session._id)
-  const newRefreshToken = jwtUtils.generateRefreshToken(user, session._id)
+  const newRefreshToken = jwtUtils.generateRefreshToken(user, payload.sessionId)
   const { exp } = jwtUtils.decodeToken(newRefreshToken)
+  const rotated = await sessionModel.updateOne(currentSession, {
+    $set: { tokenHash: hashToken(newRefreshToken), expiresAt: new Date(exp * AUTH_LIMITS.JWT_EXP_SECONDS_TO_MS) }
+  })
+  if (!rotated.matchedCount) throw new ApiError(StatusCodes.UNAUTHORIZED, 'Phiên đăng nhập không tồn tại.')
 
-  session.tokenHash = hashToken(newRefreshToken)
-  session.expiresAt = new Date(exp * AUTH_LIMITS.JWT_EXP_SECONDS_TO_MS)
-  await session.save()
-
-  return { accessToken, refreshToken: newRefreshToken }
+  return { accessToken: jwtUtils.generateAccessToken(user, payload.sessionId), refreshToken: newRefreshToken }
 }
 
 // Đăng xuất
@@ -124,7 +124,14 @@ const changePassword = async ({ userId, currentSessionId, oldPassword, newPasswo
 }
 
 // Gửi OTP quên mật khẩu
+const requireEmailDelivery = () => {
+  if (!envConfig.email.enabled) {
+    throw new ApiError(StatusCodes.SERVICE_UNAVAILABLE, 'Dịch vụ gửi email hiện chưa khả dụng.')
+  }
+}
+
 const forgotPassword = async ({ email }) => {
+  requireEmailDelivery()
   const user = await userModel.findOne({ email })
   if (!user) return
 
@@ -170,6 +177,25 @@ const forgotPassword = async ({ email }) => {
   }
 }
 
+const invalidOtp = () => new ApiError(StatusCodes.BAD_REQUEST, 'OTP khong hop le hoac da het han.')
+
+const validOtpRecord = (record) => ({
+  _id: record._id,
+  otpHash: record.otpHash,
+  expiresAt: { $eq: record.expiresAt, $gt: new Date() },
+  attemptCount: { $lt: AUTH_LIMITS.MAX_VERIFY_ATTEMPTS }
+})
+
+const verifyOtp = async (model, record, otp) => {
+  if (!record || record.expiresAt <= new Date() || record.attemptCount >= AUTH_LIMITS.MAX_VERIFY_ATTEMPTS) {
+    throw invalidOtp()
+  }
+  if (record.otpHash !== hashToken(otp)) {
+    await model.updateOne(validOtpRecord(record), { $inc: { attemptCount: 1 } })
+    throw invalidOtp()
+  }
+}
+
 // Đặt lại mật khẩu bằng OTP
 const resetPassword = async ({ email, otp, newPassword }) => {
   const user = await userModel.findOne({ email })
@@ -178,20 +204,7 @@ const resetPassword = async ({ email, otp, newPassword }) => {
   }
 
   const record = await passwordResetModel.findOne({ userId: user._id })
-  if (!record || record.expiresAt < new Date()) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'OTP khong hop le hoac da het han.')
-  }
-
-  if (record.attemptCount >= AUTH_LIMITS.MAX_VERIFY_ATTEMPTS) {
-    await passwordResetModel.deleteOne({ _id: record._id })
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Ban da nhap sai OTP qua nhieu lan. Vui long yeu cau OTP moi.')
-  }
-
-  if (record.otpHash !== hashToken(otp)) {
-    record.attemptCount += 1
-    await record.save()
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'OTP khong hop le hoac da het han.')
-  }
+  await verifyOtp(passwordResetModel, record, otp)
 
   if (user.passwordHash) {
     const isSame = await bcrypt.compare(newPassword, user.passwordHash)
@@ -200,14 +213,17 @@ const resetPassword = async ({ email, otp, newPassword }) => {
     }
   }
 
-  user.passwordHash = await bcrypt.hash(newPassword, envConfig.bcrypt.saltRounds)
+  const passwordHash = await bcrypt.hash(newPassword, envConfig.bcrypt.saltRounds)
+  const consumed = await passwordResetModel.findOneAndDelete(validOtpRecord(record))
+  if (!consumed) throw invalidOtp()
+  user.passwordHash = passwordHash
   await user.save()
-  await passwordResetModel.deleteMany({ userId: user._id })
   await sessionModel.deleteMany({ userId: user._id })
 }
 
 // Gửi lại OTP quên mật khẩu
 const resendForgotPasswordOtp = async ({ email }) => {
+  requireEmailDelivery()
   const user = await userModel.findOne({ email })
   if (!user) return
 
@@ -275,10 +291,10 @@ const googleLogin = async (profile) => {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Xác thực Google thất bại.')
   }
 
-  const rawEmail = profile.emails?.find(({ verified }) => verified)?.value || profile.emails?.[0]?.value
+  const rawEmail = profile.emails?.find(({ verified }) => verified === true)?.value
 
   if (!rawEmail?.trim()) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Tài khoản Google không cung cấp email.')
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Tài khoản Google chưa xác minh email.')
   }
 
   const email = rawEmail.trim().toLowerCase()
@@ -299,7 +315,9 @@ const googleLogin = async (profile) => {
     })
 
     try {
-      await emailQueue.add(EMAIL_JOB_NAME.WELCOME, { email: user.email, displayName: user.displayName })
+      if (envConfig.email.enabled) {
+        await emailQueue.add(EMAIL_JOB_NAME.WELCOME, { email: user.email, displayName: user.displayName })
+      }
     } catch (err) {
       logger.error(`Khong the day job email chao mung: ${err.message}`)
     }
@@ -317,6 +335,7 @@ const pushRegisterOtpEmail = async ({ email, displayName, otp }) => {
 }
 
 const requestRegisterOtp = async ({ email, password, displayName }) => {
+  requireEmailDelivery()
   const existing = await userModel.findOne({ email })
   if (existing) {
     throw new ApiError(StatusCodes.CONFLICT, 'Email đã tồn tại.')
@@ -368,40 +387,29 @@ const requestRegisterOtp = async ({ email, password, displayName }) => {
 // Xác thực OTP và tạo tài khoản
 const verifyRegisterOtp = async ({ email, otp }) => {
   const pending = await pendingRegistrationModel.findOne({ email })
-  if (!pending || pending.expiresAt < new Date()) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'OTP khong hop le hoac da het han.')
-  }
-
-  // Chặn brute-force: quá số lần nhập sai thì hủy pending, bắt đăng ký lại
-  if (pending.attemptCount >= AUTH_LIMITS.MAX_VERIFY_ATTEMPTS) {
-    await pendingRegistrationModel.deleteOne({ _id: pending._id })
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Ban da nhap sai OTP qua nhieu lan. Vui long dang ky lai.')
-  }
-
-  if (pending.otpHash !== hashToken(otp)) {
-    pending.attemptCount += 1
-    await pending.save()
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'OTP khong hop le hoac da het han.')
-  }
+  await verifyOtp(pendingRegistrationModel, pending, otp)
 
   // Chống race: email có thể vừa được tạo bởi luồng khác giữa lúc gửi và xác thực
   const existing = await userModel.findOne({ email })
   if (existing) {
-    await pendingRegistrationModel.deleteOne({ _id: pending._id })
+    await pendingRegistrationModel.deleteOne(validOtpRecord(pending))
     throw new ApiError(StatusCodes.CONFLICT, 'Email đã tồn tại.')
   }
 
+  const consumed = await pendingRegistrationModel.findOneAndDelete(validOtpRecord(pending))
+  if (!consumed) throw invalidOtp()
+
   // Tạo user thật từ thông tin đã lưu
   const user = await userModel.create({
-    email: pending.email,
-    passwordHash: pending.passwordHash,
-    displayName: pending.displayName
+    email: consumed.email,
+    passwordHash: consumed.passwordHash,
+    displayName: consumed.displayName
   })
 
-  await pendingRegistrationModel.deleteOne({ _id: pending._id })
-
   try {
-    await emailQueue.add(EMAIL_JOB_NAME.WELCOME, { email: user.email, displayName: user.displayName })
+    if (envConfig.email.enabled) {
+      await emailQueue.add(EMAIL_JOB_NAME.WELCOME, { email: user.email, displayName: user.displayName })
+    }
   } catch (err) {
     logger.error(`Khong the day job email chao mung: ${err.message}`)
   }
@@ -412,6 +420,7 @@ const verifyRegisterOtp = async ({ email, otp }) => {
 
 // Gửi lại OTP đăng ký
 const resendRegisterOtp = async ({ email }) => {
+  requireEmailDelivery()
   const existing = await userModel.findOne({ email })
   if (existing) {
     throw new ApiError(StatusCodes.CONFLICT, 'Email đã tồn tại.')

@@ -35,6 +35,11 @@ studyRoomRouter.post(
   validateMiddleware(studyRoomValidation.joinByCode),
   studyRoomController.joinByCode
 )
+studyRoomRouter.patch(
+  '/:id/reservation/cancel',
+  validateMiddleware(studyRoomValidation.cancelReservation),
+  studyRoomController.cancelReservation
+)
 studyRoomRouter.get('/:id', validateMiddleware(studyRoomValidation.roomIdParam), studyRoomController.getById)
 studyRoomRouter.get(
   '/:id/messages',
@@ -46,6 +51,7 @@ studyRoomRouter.get(
   validateMiddleware(studyRoomValidation.roomIdParam),
   studyRoomController.leaderboard
 )
+studyRoomRouter.get('/:id/summary', validateMiddleware(studyRoomValidation.roomIdParam), studyRoomController.getSummary)
 studyRoomRouter.post(
   '/:id/media-token',
   validateMiddleware(studyRoomValidation.roomIdParam),

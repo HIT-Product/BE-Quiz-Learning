@@ -10,5 +10,6 @@ quizRouter.use(authMiddleware)
 
 quizRouter.post('/', validateMiddleware(quizValidation.generate), quizController.generate)
 quizRouter.post('/submit', validateMiddleware(quizValidation.submit), quizController.submit)
+quizRouter.get('/attempts/:attemptId', validateMiddleware(quizValidation.result), quizController.getResult)
 
 export default quizRouter

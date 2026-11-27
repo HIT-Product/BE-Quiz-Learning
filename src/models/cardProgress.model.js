@@ -23,6 +23,11 @@ const cardProgressSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+    appliedQuizAttempts: {
+      type: [mongoose.Schema.Types.ObjectId],
+      default: undefined,
+      select: false
+    },
     lastReviewedAt: {
       type: Date,
       default: null

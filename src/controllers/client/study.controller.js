@@ -5,7 +5,7 @@ import { catchAsync, response } from '../../utils/index.js'
 
 // [GET] /decks/:deckId/study
 const startSession = catchAsync(async (req, res) => {
-  const data = await studyService.startSession(req.params.deckId, req.user._id, req.query.filter)
+  const data = await studyService.startSession(req.params.deckId, req.user._id, req.validatedQuery.filter)
   res.status(StatusCodes.OK).json(response(StatusCodes.OK, 'Bắt đầu phiên học thành công.', data))
 })
 

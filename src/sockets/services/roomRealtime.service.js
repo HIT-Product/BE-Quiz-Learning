@@ -367,7 +367,8 @@ const setMicLock = async (nsp, roomId, hostId, micLocked) => {
           roomId,
           userId,
           allowMicrophone: !micLocked && room.settings.micAllowed !== false,
-          allowCamera: room.settings.cameraAllowed !== false
+          allowCamera: room.settings.cameraAllowed !== false,
+          allowScreenShare: room.settings.screenShareAllowed !== false
         })
       )
   )

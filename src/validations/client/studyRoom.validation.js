@@ -46,6 +46,11 @@ const roomIdParam = {
   params: Joi.object({ id: objectId.required() })
 }
 
+const cancelReservation = {
+  ...roomIdParam,
+  body: Joi.object({ reservationExpiresAt: Joi.date().iso().required() })
+}
+
 const listMessages = {
   params: Joi.object({ id: objectId.required() }),
   query: Joi.object({
@@ -54,4 +59,4 @@ const listMessages = {
   })
 }
 
-export default { create, list, joinByCode, roomIdParam, listMessages }
+export default { create, list, joinByCode, roomIdParam, cancelReservation, listMessages }
